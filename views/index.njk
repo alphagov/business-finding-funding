@@ -1,0 +1,19 @@
+{% extends "layout.njk" %}
+
+{% block content %}
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-two-thirds">
+      <h1 class="govuk-heading-xl">{{ serviceName }}</h1>
+
+      <p class="govuk-body">This is a starter application used to test deployments to Heroku.</p>
+      <p class="govuk-body">It does not search for funding or collect any information.</p>
+
+      <h2 class="govuk-heading-m">What this application includes</h2>
+      <ul class="govuk-list govuk-list--bullet">
+        <li>pages built with the GOV.UK Design System</li>
+        <li>a health check at <a class="govuk-link" href="/health">/health</a></li>
+        <li>settings that stop search engines listing the site</li>
+      </ul>
+    </div>
+  </div>
+{% endblock %}
