@@ -90,6 +90,28 @@ The compiled `dist/` folder is not committed to the repository.
 
 The application is deployed to the `govuk-business-finding-funding` app in the `government-digital-service` team.
 
+### How deployment works
+
+Every change merged to `main` is deployed automatically by the `deploy` job in `.github/workflows/test.yml`, once the `test` job has passed. The job runs `scripts/deploy-heroku.sh`, which:
+
+1. packages the commit and uploads it to Heroku
+2. builds it, showing Heroku's build log in the GitHub Actions log
+3. waits for the new release to start, then checks it is still running after Heroku's 60 second start-up limit
+
+The job fails, and the previous release keeps running, if the build fails or the new release does not start.
+
+To redeploy without a code change, run the **Test and deploy** workflow by hand on `main` from the Actions tab.
+
+### Setting up deployment
+
+This only needs doing once, by someone with access to the Heroku app:
+
+1. Create a Heroku API key for this repository only. In Heroku, go to **Account settings > Applications > Authorizations > Create authorization** and give it a description such as "alphagov/business-finding-funding deploys". Do not use your personal API key.
+2. In this repository, go to **Settings > Environments > New environment** and create an environment called `heroku`. Under **Deployment branches and tags**, allow only `main`.
+3. In the `heroku` environment, add an environment secret called `HEROKU_API_KEY` containing the key from step 1.
+
+To revoke deploy access, delete the authorisation in Heroku. To rotate the key, create a new authorisation, update the secret, then delete the old authorisation.
+
 ## Licence
 
 [MIT](LICENCE), Crown Copyright (Government Digital Service).
