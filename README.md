@@ -97,8 +97,9 @@ Every change merged to `main` is deployed automatically by the `deploy` job in `
 1. packages the commit and uploads it to Heroku
 2. builds it, showing Heroku's build log in the GitHub Actions log
 3. waits for the new release to start, then checks it is still running after Heroku's 60 second start-up limit
+4. requests `/health` and checks it returns `{"status":"ok"}`
 
-The job fails, and the previous release keeps running, if the build fails or the new release does not start.
+If the build fails, the job fails and the previous release keeps running. If the new release does not start, crashes, or does not answer `/health`, the job rolls the app back to the release that was live before, then fails. If the rollback itself fails, the job log says so and shows the command to run by hand: `heroku rollback -a govuk-business-finding-funding`.
 
 To redeploy without a code change, run the **Test and deploy** workflow by hand on `main` from the Actions tab.
 
