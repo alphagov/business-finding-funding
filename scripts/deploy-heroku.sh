@@ -2,7 +2,8 @@
 #
 # Deploys the current commit to Heroku using the Heroku Platform API:
 # packages the code, uploads it, builds it, then checks the new release
-# starts and stays up.
+# starts, stays up and answers /health. If the new release fails those
+# checks, the app is rolled back to the release that was live before.
 #
 # Needs:
 #   HEROKU_API_KEY   an API key allowed to deploy the app
@@ -32,9 +33,32 @@ heroku_api() {
     "$@"
 }
 
+# Puts the release that was live before this deploy back. Only used once the
+# new release exists: a failed build never replaces the live release.
+roll_back() {
+  if [ -z "$previous_release" ]; then
+    echo "::warning::There is no earlier release to roll back to."
+    return 0
+  fi
+  echo "Rolling back to release $previous_release"
+  heroku_api --request POST --header "Content-Type: application/json" \
+    --data "$(jq -n --arg release "$previous_release" '{release: $release}')" \
+    "$app_api/releases" >/dev/null ||
+    echo "::warning::The rollback failed. Roll back by hand with: heroku rollback -a $HEROKU_APP_NAME"
+}
+
+fail_and_roll_back() {
+  roll_back
+  fail "$1"
+}
+
 version="$(git rev-parse HEAD)"
 archive="$(mktemp)"
 trap 'rm -f "$archive"' EXIT
+
+# The release that is live now, so a bad deploy can be undone.
+previous_release="$(heroku_api --header "Range: version ..; order=desc,max=10" "$app_api/releases" |
+  jq -r '[.[] | select(.current)] | first | .id // empty')"
 
 echo "Packaging $version"
 git archive --format=tar.gz --output="$archive" HEAD
@@ -92,12 +116,24 @@ for _ in $(seq 1 18); do
   fi
   sleep 10
 done
-[ "$started" = true ] || fail "The new release did not start within 3 minutes."
+[ "$started" = true ] || fail_and_roll_back "The new release did not start within 3 minutes."
 
 # A web dyno that never starts serving is stopped after the boot timeout,
 # so check it is still up once that has passed.
 sleep "$boot_timeout_seconds"
-[ "$(count_web_dynos crashed)" -eq 0 ] || fail "The new release crashed after starting. Check the Heroku logs."
-[ "$(count_web_dynos up)" -gt 0 ] || fail "The new release is not running. Check the Heroku logs."
+[ "$(count_web_dynos crashed)" -eq 0 ] || fail_and_roll_back "The new release crashed after starting. Check the Heroku logs."
+[ "$(count_web_dynos up)" -gt 0 ] || fail_and_roll_back "The new release is not running. Check the Heroku logs."
+
+# A running dyno does not prove the app answers requests, so ask for /health.
+web_url="$(heroku_api "$app_api" | jq -r '.web_url')"
+healthy=false
+for _ in $(seq 1 6); do
+  if curl --fail --silent --max-time 10 "${web_url%/}/health" | jq -e '.status == "ok"' >/dev/null 2>&1; then
+    healthy=true
+    break
+  fi
+  sleep 5
+done
+[ "$healthy" = true ] || fail_and_roll_back "The new release is running but ${web_url%/}/health did not return status ok."
 
 echo "Deployed $version to $HEROKU_APP_NAME"
