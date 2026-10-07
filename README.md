@@ -47,7 +47,7 @@ In production, plain HTTP requests are redirected to HTTPS.
 
 ## Run it locally
 
-Requires Node.js 24.
+Requires Node.js 24. If you use `nvm` or `fnm`, run `nvm use` or `fnm use` in this folder to pick it up from `.nvmrc`.
 
 ```sh
 npm install
