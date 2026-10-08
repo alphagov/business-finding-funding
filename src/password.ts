@@ -1,4 +1,5 @@
 import crypto from 'node:crypto'
+import { promisify } from 'node:util'
 import express, { type Router } from 'express'
 import { readCookie, safeEqual } from './cookies'
 
@@ -11,8 +12,12 @@ interface PasswordOptions {
   production: boolean
 }
 
-function hash (value: string): string {
-  return crypto.createHash('sha256').update(`site-password:${value}`).digest('hex')
+const scrypt = promisify(crypto.scrypt) as (password: string, salt: string, keylen: number) => Promise<Buffer>
+
+// scrypt is deliberately slow, so the password cannot be guessed quickly
+// from a copied cookie.
+async function hash (value: string): Promise<string> {
+  return (await scrypt(value, 'site-password', 32)).toString('hex')
 }
 
 // Only allow redirects to paths on this site.
@@ -37,11 +42,12 @@ export function passwordProtection ({ password, production }: PasswordOptions): 
     return router
   }
 
+  // Worked out once, when the app starts.
   const expected = hash(password)
 
-  router.use((req, res, next) => {
+  router.use(async (req, res, next) => {
     if (OPEN_PATHS.includes(req.path) || req.path.startsWith('/assets/')) return next()
-    if (safeEqual(readCookie(req, COOKIE_NAME), expected)) return next()
+    if (safeEqual(readCookie(req, COOKIE_NAME), await expected)) return next()
     res.redirect(`/password?returnUrl=${encodeURIComponent(req.originalUrl)}`)
   })
 
@@ -49,16 +55,16 @@ export function passwordProtection ({ password, production }: PasswordOptions): 
     res.render('password', { returnUrl: safeReturnUrl(req.query.returnUrl) })
   })
 
-  router.post('/password', express.urlencoded({ extended: false }), (req, res) => {
+  router.post('/password', express.urlencoded({ extended: false }), async (req, res) => {
     const body: Record<string, unknown> = req.body ?? {}
     const returnUrl = safeReturnUrl(body.returnUrl)
     const attempt = typeof body.password === 'string' ? body.password : ''
 
-    if (!safeEqual(hash(attempt), expected)) {
+    if (!safeEqual(await hash(attempt), await expected)) {
       return res.status(401).render('password', { returnUrl, error: true })
     }
 
-    res.cookie(COOKIE_NAME, expected, {
+    res.cookie(COOKIE_NAME, await expected, {
       maxAge: COOKIE_MAX_AGE_MS,
       httpOnly: true,
       sameSite: 'lax',
