@@ -1,14 +1,23 @@
 # Find funding for your business (business-finding-funding)
 
-A placeholder application for the Find funding for your business service, owned by the GOV.UK Business team (`@alphagov/gov-uk-business-team`). It will be replaced by the supplier's proof of concept once that code has been checked.
+The Find funding for your business service, owned by the GOV.UK Business team (`@alphagov/gov-uk-business-team`). It is being built from the pages and content tested in the pilot prototype.
 
-It is written in [TypeScript](https://www.typescriptlang.org/) and built with [Express](https://expressjs.com/), [Nunjucks](https://mozilla.github.io/nunjucks/) and the [GOV.UK Design System](https://design-system.service.gov.uk/) (`govuk-frontend`). It runs on Heroku. It does not search for funding or collect any information.
+It is written in [TypeScript](https://www.typescriptlang.org/) and built with [Express](https://expressjs.com/), [Nunjucks](https://mozilla.github.io/nunjucks/) and the [GOV.UK Design System](https://design-system.service.gov.uk/) (`govuk-frontend`). It runs on Heroku.
+
+So far it asks which company the visitor runs, using Companies House, and which local authority area they want funding in. It does not search for funding yet.
 
 ## What it includes
 
 | Path          | Purpose                                              |
 | ------------- | ---------------------------------------------------- |
-| `/`           | Start page using the GOV.UK page template            |
+| `/`           | Start page                                           |
+| `/business-name` | What is your company called?                      |
+| `/select-business` | Choose the company from the Companies House search results |
+| `/confirm-business` | Check the company details                      |
+| `/registered-address` | Use the registered address to find funding? (skipped if it has no UK postcode) |
+| `/postcode`   | Postcode of the business premises or area             |
+| `/confirm-area` | Shows the local authority for the postcode          |
+| `/answers`    | Answers so far. Will become the check your answers page |
 | `/password`   | Asks for the site password                           |
 | `/health`     | Health check that returns `{"status":"ok"}`          |
 | `/info`       | App version, Node.js version, Heroku stack and operating system (needs the password) |
@@ -25,13 +34,36 @@ Every response also sends an `X-Robots-Tag: noindex, nofollow` header so the sit
 | `src/app.ts`         | Creates the Express application from those settings             |
 | `src/server.ts`      | Starts the application on a port. The only file tied to running as a long-lived server |
 | `src/password.ts`    | Shared password protection                                      |
+| `src/session.ts`     | Keeps the visitor's answers in a signed cookie                  |
+| `src/companies-house.ts` | Searches for companies and gets their details from Companies House |
+| `src/postcodes.ts`   | Checks postcodes and finds their local authority using [postcodes.io](https://postcodes.io/) |
+| `src/journey/`       | The question pages, and how answers are formatted for display  |
 | `src/info.ts`        | Builds the `/info` response                                     |
 | `views/`             | Nunjucks page templates                                         |
 | `test/`              | Tests, written in TypeScript                                    |
 
-The app keeps nothing in memory or on local disk between requests, and takes all its settings from environment variables. This means it can move from Heroku to another platform, such as AWS Lambda, by replacing `src/server.ts` rather than rewriting the app.
+The app keeps nothing in memory or on local disk between requests, and takes all its settings from environment variables. The visitor's answers are kept in a cookie, signed so they cannot be changed. This means it can move from Heroku to another platform, such as AWS Lambda, by replacing `src/server.ts` rather than rewriting the app.
 
 As the service grows, keep its rules (for example, matching businesses to funding schemes) in their own modules, separate from the Express routes, so they can be tested and moved on their own.
+
+## Settings
+
+| Environment variable      | Purpose |
+| ------------------------- | ------- |
+| `SITE_PASSWORD`           | The shared password. See [Password protection](#password-protection) |
+| `SESSION_SECRET`          | A long random value used to sign the answers cookie. Changing it clears everyone's answers |
+| `COMPANIES_HOUSE_API_KEY` | A [Companies House API key](https://developer.company-information.service.gov.uk/) for the live service. GOV.UK Business team members can ask the team for it |
+
+On Heroku, set these under **Settings > Config Vars**.
+
+When running locally, all three are optional:
+
+- without `SESSION_SECRET`, a new one is made each time the app starts, so answers are lost when it restarts
+- without `COMPANIES_HOUSE_API_KEY`, the app uses made-up companies from `src/companies-house.ts`. Search for "example" to see them
+
+In production, the question pages show an error page if `SESSION_SECRET` or `COMPANIES_HOUSE_API_KEY` is missing, and the reason is written to the logs. The start page and `/health` still work.
+
+The postcode lookup uses the public postcodes.io API and needs no key.
 
 ## Password protection
 

@@ -1,0 +1,22 @@
+{% extends "layout.njk" %}
+
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
+{% from "govuk/components/input/macro.njk" import govukInput %}
+{% from "govuk/components/radios/macro.njk" import govukRadios %}
+{% from "govuk/components/summary-list/macro.njk" import govukSummaryList %}
+
+{# Pages set `title` and may be given an `error` of { text, href }. #}
+{% set pageTitle = ("Error: " if error else "") + title %}
+
+{% block content %}
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-two-thirds">
+      {% if error %}
+        {{ govukErrorSummary({ titleText: "There is a problem", errorList: [error] }) }}
+      {% endif %}
+
+      {% block page %}{% endblock %}
+    </div>
+  </div>
+{% endblock %}

@@ -1,16 +1,40 @@
 import path from 'node:path'
 import express, { type Express, type NextFunction, type Request, type Response } from 'express'
 import nunjucks from 'nunjucks'
+import { CompaniesHouseApi, FakeCompaniesHouse, missingCompaniesHouse, type CompaniesHouse } from './companies-house'
 import type { Config } from './config'
 import { info } from './info'
+import { journeyRoutes } from './journey/routes'
 import { passwordProtection } from './password'
+import { PostcodesIo, type PostcodeLookup } from './postcodes'
 
 const govukFrontendDist = path.join(path.dirname(require.resolve('govuk-frontend/package.json')), 'dist')
 
 // views/ sits one level above both src/ and the compiled dist/.
 const viewsDir = path.join(__dirname, '..', 'views')
 
-export function createApp (config: Config): Express {
+export interface Services {
+  companiesHouse: CompaniesHouse
+  postcodes: PostcodeLookup
+}
+
+// Uses made-up Companies House data when running locally without an API key.
+export function createServices (config: Config): Services {
+  let companiesHouse: CompaniesHouse
+
+  if (config.companiesHouseApiKey) {
+    companiesHouse = new CompaniesHouseApi(config.companiesHouseApiKey)
+  } else if (config.production) {
+    companiesHouse = missingCompaniesHouse
+  } else {
+    console.warn('COMPANIES_HOUSE_API_KEY is not set, so made-up companies will be used')
+    companiesHouse = new FakeCompaniesHouse()
+  }
+
+  return { companiesHouse, postcodes: new PostcodesIo() }
+}
+
+export function createApp (config: Config, services: Services = createServices(config)): Express {
   const app = express()
 
   app.disable('x-powered-by')
@@ -63,6 +87,8 @@ export function createApp (config: Config): Express {
   app.get('/', (req, res) => {
     res.render('index')
   })
+
+  app.use(journeyRoutes({ ...services, sessionSecret: config.sessionSecret, production: config.production }))
 
   app.use((req, res) => {
     res.status(404).render('404')

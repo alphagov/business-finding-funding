@@ -1,5 +1,6 @@
 import crypto from 'node:crypto'
-import express, { type Request, type Router } from 'express'
+import express, { type Router } from 'express'
+import { readCookie, safeEqual } from './cookies'
 
 const COOKIE_NAME = 'site-password'
 const COOKIE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000
@@ -12,20 +13,6 @@ interface PasswordOptions {
 
 function hash (value: string): string {
   return crypto.createHash('sha256').update(`site-password:${value}`).digest('hex')
-}
-
-function safeEqual (a: string, b: string): boolean {
-  const bufferA = Buffer.from(a)
-  const bufferB = Buffer.from(b)
-  return bufferA.length === bufferB.length && crypto.timingSafeEqual(bufferA, bufferB)
-}
-
-function readCookie (req: Request, name: string): string {
-  for (const part of (req.headers.cookie ?? '').split(';')) {
-    const [key, ...value] = part.trim().split('=')
-    if (key === name) return value.join('=')
-  }
-  return ''
 }
 
 // Only allow redirects to paths on this site.
