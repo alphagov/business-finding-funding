@@ -1,0 +1,22 @@
+{% extends "journey/layout.njk" %}
+
+
+{% set title = "Your shortlist" %}
+{% set returnTo = "/shortlist" %}
+
+{% block page %}
+  <h1 class="govuk-heading-l">{{ title }}</h1>
+
+  {% include "funding/example-warning.njk" %}
+
+  {% for group in groups %}
+    <h2 class="govuk-heading-l govuk-!-margin-top-6">{{ group.heading }}</h2>
+    {% for card in group.cards %}
+      {% include "funding/card.njk" %}
+    {% endfor %}
+  {% else %}
+    <p class="govuk-body">You have not added anything to your shortlist yet.</p>
+  {% endfor %}
+
+  <p class="govuk-body"><a class="govuk-link" href="/results">Back to your funding results</a></p>
+{% endblock %}

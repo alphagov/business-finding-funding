@@ -1,7 +1,5 @@
 {% extends "journey/layout.njk" %}
 
-{% from "govuk/components/inset-text/macro.njk" import govukInsetText %}
-
 {% set title = "Check your answers" %}
 
 {% block page %}
@@ -9,5 +7,5 @@
 
   {{ govukSummaryList({ rows: rows }) }}
 
-  {{ govukInsetText({ text: "The funding results have not been built yet." }) }}
+  {{ govukButton({ text: "Show funding options", href: "/results" }) }}
 {% endblock %}

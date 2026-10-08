@@ -2,6 +2,7 @@ import type { AddressInfo } from 'node:net'
 import { createApp, type Services } from '../src/app'
 import { FakeCompaniesHouse } from '../src/companies-house'
 import type { Config } from '../src/config'
+import { loadFunding } from '../src/funding/schemes'
 import { FakePostcodes } from '../src/postcodes'
 
 export interface TestServer {
@@ -10,11 +11,11 @@ export interface TestServer {
 }
 
 // Uses made-up Companies House and postcode data so tests never call the
-// real services.
+// real services, and the example funding schemes.
 export async function startServer (config: Partial<Config> = {}, services: Partial<Services> = {}): Promise<TestServer> {
   const app = createApp(
     { port: 0, production: false, sessionSecret: 'test-session-secret', ...config },
-    { companiesHouse: new FakeCompaniesHouse(), postcodes: new FakePostcodes(), ...services }
+    { companiesHouse: new FakeCompaniesHouse(), postcodes: new FakePostcodes(), funding: loadFunding(), ...services }
   )
   const server = app.listen(0)
   await new Promise((resolve) => server.once('listening', resolve))
