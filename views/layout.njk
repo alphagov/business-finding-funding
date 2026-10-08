@@ -1,5 +1,6 @@
 {% extends "govuk/template.njk" %}
 
+{% from "govuk/components/back-link/macro.njk" import govukBackLink %}
 {% from "govuk/components/phase-banner/macro.njk" import govukPhaseBanner %}
 
 {% set serviceName = "Find funding for your business" %}
@@ -17,6 +18,10 @@
     tag: { text: "Experiment" },
     text: "This is a test application. It is not a real service."
   }) }}
+
+  {% if backLink %}
+    {{ govukBackLink({ href: backLink }) }}
+  {% endif %}
 {% endblock %}
 
 {% block bodyEnd %}

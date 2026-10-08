@@ -1,0 +1,28 @@
+{% extends "journey/layout.njk" %}
+
+{% set title = "Check your company details" %}
+
+{% block page %}
+  <h1 class="govuk-heading-l">{{ title }}</h1>
+
+  {% set tradingHtml %}
+    {{ tradingHistory }}
+    <div class="govuk-hint govuk-!-margin-bottom-0">Incorporated {{ incorporatedOn }}</div>
+  {% endset %}
+
+  {{ govukSummaryList({
+    rows: [
+      { key: { text: "Company name" }, value: { text: company.name } },
+      { key: { text: "Company number" }, value: { text: company.number } },
+      { key: { text: "Status" }, value: { text: status } },
+      { key: { text: "Trading history" }, value: { html: tradingHtml } } if incorporatedOn else false,
+      { key: { text: "Registered office address" }, value: { html: addressHtml } }
+    ] | select
+  }) }}
+
+  <form method="post" action="/confirm-business" novalidate>
+    {{ govukButton({ text: "Confirm and continue" }) }}
+  </form>
+
+  <p class="govuk-body"><a class="govuk-link" href="/business-name">This is not my company – search again</a></p>
+{% endblock %}

@@ -1,5 +1,7 @@
 import crypto from 'node:crypto'
-import express, { type Request, type Router } from 'express'
+import { promisify } from 'node:util'
+import express, { type Router } from 'express'
+import { readCookie, safeEqual } from './cookies'
 
 const COOKIE_NAME = 'site-password'
 const COOKIE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000
@@ -10,22 +12,14 @@ interface PasswordOptions {
   production: boolean
 }
 
-function hash (value: string): string {
-  return crypto.createHash('sha256').update(`site-password:${value}`).digest('hex')
-}
+const scrypt = promisify(crypto.scrypt) as (password: string, salt: string, keylen: number) => Promise<Buffer>
 
-function safeEqual (a: string, b: string): boolean {
-  const bufferA = Buffer.from(a)
-  const bufferB = Buffer.from(b)
-  return bufferA.length === bufferB.length && crypto.timingSafeEqual(bufferA, bufferB)
-}
-
-function readCookie (req: Request, name: string): string {
-  for (const part of (req.headers.cookie ?? '').split(';')) {
-    const [key, ...value] = part.trim().split('=')
-    if (key === name) return value.join('=')
-  }
-  return ''
+// The cookie holds a signature made with a key derived from the password,
+// rather than the password or a hash of it. scrypt is deliberately slow, so
+// the password cannot be guessed quickly from a copied cookie.
+async function signInToken (password: string): Promise<string> {
+  const key = await scrypt(password, 'site-password', 32)
+  return crypto.createHmac('sha256', key).update('signed-in').digest('hex')
 }
 
 // Only allow redirects to paths on this site.
@@ -34,8 +28,8 @@ function safeReturnUrl (value: unknown): string {
 }
 
 // Asks for a single shared password before showing any page. Once entered,
-// a cookie holding a hash of the password keeps the visitor signed in, so
-// changing the password signs everyone out.
+// a cookie signed with a key derived from the password keeps the visitor
+// signed in, so changing the password signs everyone out.
 export function passwordProtection ({ password, production }: PasswordOptions): Router {
   const router = express.Router()
 
@@ -50,11 +44,12 @@ export function passwordProtection ({ password, production }: PasswordOptions): 
     return router
   }
 
-  const expected = hash(password)
+  // Worked out once, when the app starts.
+  const expected = signInToken(password)
 
-  router.use((req, res, next) => {
+  router.use(async (req, res, next) => {
     if (OPEN_PATHS.includes(req.path) || req.path.startsWith('/assets/')) return next()
-    if (safeEqual(readCookie(req, COOKIE_NAME), expected)) return next()
+    if (safeEqual(readCookie(req, COOKIE_NAME), await expected)) return next()
     res.redirect(`/password?returnUrl=${encodeURIComponent(req.originalUrl)}`)
   })
 
@@ -62,16 +57,16 @@ export function passwordProtection ({ password, production }: PasswordOptions): 
     res.render('password', { returnUrl: safeReturnUrl(req.query.returnUrl) })
   })
 
-  router.post('/password', express.urlencoded({ extended: false }), (req, res) => {
+  router.post('/password', express.urlencoded({ extended: false }), async (req, res) => {
     const body: Record<string, unknown> = req.body ?? {}
     const returnUrl = safeReturnUrl(body.returnUrl)
     const attempt = typeof body.password === 'string' ? body.password : ''
 
-    if (!safeEqual(hash(attempt), expected)) {
+    if (!safeEqual(await signInToken(attempt), await expected)) {
       return res.status(401).render('password', { returnUrl, error: true })
     }
 
-    res.cookie(COOKIE_NAME, expected, {
+    res.cookie(COOKIE_NAME, await expected, {
       maxAge: COOKIE_MAX_AGE_MS,
       httpOnly: true,
       sameSite: 'lax',

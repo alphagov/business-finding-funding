@@ -1,0 +1,39 @@
+{% extends "journey/layout.njk" %}
+
+{% if results.length %}
+  {% set title = "Select your company" %}
+{% else %}
+  {% set title = "No companies found" %}
+{% endif %}
+
+{% block page %}
+  {% if results.length %}
+    <form method="post" action="/select-business" novalidate>
+      {% set items = [] %}
+      {% for result in results %}
+        {% set items = (items.push({ value: result.number, text: result.name, hint: { text: result.address }, checked: result.number == value }), items) %}
+      {% endfor %}
+
+      {{ govukRadios({
+        name: "companyNumber",
+        idPrefix: "companyNumber",
+        fieldset: { legend: { text: title, isPageHeading: true, classes: "govuk-fieldset__legend--l" } },
+        hint: { text: "Companies House results for ‘" + term + "’" },
+        items: items,
+        errorMessage: error and { text: error.text }
+      }) }}
+
+      {{ govukButton({ text: "Continue" }) }}
+    </form>
+
+    <p class="govuk-body"><a class="govuk-link" href="/business-name">My company is not listed – search again</a></p>
+  {% else %}
+    <h1 class="govuk-heading-l">{{ title }}</h1>
+
+    <p class="govuk-body">We could not find any companies on Companies House called ‘{{ term }}’.</p>
+
+    <p class="govuk-body">Check the spelling, or try the name exactly as it appears on Companies House.</p>
+
+    {{ govukButton({ text: "Search again", href: "/business-name" }) }}
+  {% endif %}
+{% endblock %}

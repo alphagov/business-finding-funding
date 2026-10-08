@@ -1,0 +1,23 @@
+{% extends "journey/layout.njk" %}
+
+{% set title = "Where do you want to find funding?" %}
+
+{% block page %}
+  <form method="post" action="/postcode" novalidate>
+    <h1 class="govuk-heading-l">{{ title }}</h1>
+
+    {{ govukInput({
+      label: { text: "Postcode of the business premises or area", classes: "govuk-label--s" },
+      hint: { text: "For example, SW1A 1AA" },
+      id: "postcode",
+      name: "postcode",
+      value: value,
+      classes: "govuk-input--width-10",
+      autocomplete: "postal-code",
+      spellcheck: false,
+      errorMessage: error and { text: error.text }
+    }) }}
+
+    {{ govukButton({ text: "Continue" }) }}
+  </form>
+{% endblock %}

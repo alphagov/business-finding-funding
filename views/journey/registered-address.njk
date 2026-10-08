@@ -1,0 +1,26 @@
+{% extends "journey/layout.njk" %}
+
+{% set title = "Do you want to use your registered address to find funding?" %}
+
+{% block page %}
+  <form method="post" action="/registered-address" novalidate>
+    {% set hintHtml %}
+      <p class="govuk-body govuk-!-margin-bottom-4">{{ addressHtml | safe }}</p>
+      Regional grants and local authority funding can be awarded based on where your day-to-day business activity happens, which might be different from where your business is registered.
+    {% endset %}
+
+    {{ govukRadios({
+      name: "useRegisteredAddress",
+      idPrefix: "useRegisteredAddress",
+      fieldset: { legend: { text: title, isPageHeading: true, classes: "govuk-fieldset__legend--l" } },
+      hint: { html: hintHtml },
+      items: [
+        { value: "yes", text: "Yes", checked: value === true },
+        { value: "no", text: "No, use a different postcode", checked: value === false }
+      ],
+      errorMessage: error and { text: error.text }
+    }) }}
+
+    {{ govukButton({ text: "Continue" }) }}
+  </form>
+{% endblock %}

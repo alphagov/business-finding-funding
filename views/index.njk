@@ -1,19 +1,36 @@
 {% extends "layout.njk" %}
 
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/inset-text/macro.njk" import govukInsetText %}
+
 {% block content %}
   <div class="govuk-grid-row">
     <div class="govuk-grid-column-two-thirds">
       <h1 class="govuk-heading-xl">{{ serviceName }}</h1>
 
-      <p class="govuk-body">This is a starter application used to test deployments to Heroku.</p>
-      <p class="govuk-body">It does not search for funding or collect any information.</p>
+      <p class="govuk-body-l">Answer a few questions about your business to get a list of national and local authority funding schemes that match it.</p>
 
-      <h2 class="govuk-heading-m">What this application includes</h2>
+      <p class="govuk-body">It takes about 2 minutes.</p>
+
+      <h2 class="govuk-heading-m">Before you start</h2>
+
+      <p class="govuk-body">You will be asked about:</p>
       <ul class="govuk-list govuk-list--bullet">
-        <li>pages built with the GOV.UK Design System</li>
-        <li>a health check at <a class="govuk-link" href="/health">/health</a></li>
-        <li>settings that stop search engines listing the site</li>
+        <li>your business location</li>
+        <li>your business sector</li>
+        <li>what you want to use the funding or support for</li>
+        <li>how much you might need</li>
       </ul>
+
+      <p class="govuk-body">You do not need a fixed goal or exact amount in mind.</p>
+
+      <p class="govuk-body">Your business must be registered with Companies House.</p>
+
+      {{ govukInsetText({
+        text: "This is a trial service covering a limited selection of funding opportunities. We are adding more national and local authority schemes as we test the service."
+      }) }}
+
+      {{ govukButton({ text: "Start now", href: "/business-name", isStartButton: true }) }}
     </div>
   </div>
 {% endblock %}

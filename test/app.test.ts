@@ -88,6 +88,7 @@ test('start page renders with the GOV.UK template once signed in', async () => {
   assert.match(body, /<h1 class="govuk-heading-xl">Find funding for your business<\/h1>/)
   assert.match(body, /<title>Find funding for your business – GOV.UK<\/title>/)
   assert.match(body, /govuk-phase-banner/)
+  assert.match(body, /Start now/)
   assert.equal(res.headers.get('x-robots-tag'), 'noindex, nofollow')
 })
 

@@ -1,0 +1,20 @@
+{% extends "journey/layout.njk" %}
+
+{% set title = "What is your company called?" %}
+
+{% block page %}
+  <form method="post" action="/business-name" novalidate>
+    {{ govukInput({
+      label: { text: title, classes: "govuk-label--l", isPageHeading: true },
+      hint: { text: "Enter the name as it appears on Companies House" },
+      id: "companyName",
+      name: "companyName",
+      value: value,
+      autocomplete: "organization",
+      spellcheck: false,
+      errorMessage: error and { text: error.text }
+    }) }}
+
+    {{ govukButton({ text: "Search" }) }}
+  </form>
+{% endblock %}

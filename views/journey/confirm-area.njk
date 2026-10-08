@@ -1,0 +1,16 @@
+{% extends "journey/layout.njk" %}
+
+{% set title = area.postcode + " is in " + area.localAuthority %}
+
+{% block page %}
+  <h1 class="govuk-heading-l">{{ title }}</h1>
+
+  <p class="govuk-body">We’ll use this to check for local funding opportunities, as well as national ones.</p>
+
+  <form method="post" action="/confirm-area" novalidate>
+    <div class="govuk-button-group">
+      {{ govukButton({ text: "Continue" }) }}
+      <a class="govuk-link" href="/postcode">Use a different postcode</a>
+    </div>
+  </form>
+{% endblock %}
