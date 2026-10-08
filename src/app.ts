@@ -3,10 +3,13 @@ import express, { type Express, type NextFunction, type Request, type Response }
 import nunjucks from 'nunjucks'
 import { CompaniesHouseApi, FakeCompaniesHouse, missingCompaniesHouse, type CompaniesHouse } from './companies-house'
 import type { Config } from './config'
+import { fundingRoutes } from './funding/routes'
+import { loadFunding, type FundingData } from './funding/schemes'
 import { info } from './info'
 import { journeyRoutes } from './journey/routes'
 import { passwordProtection } from './password'
 import { PostcodesIo, type PostcodeLookup } from './postcodes'
+import { session } from './session'
 
 const govukFrontendDist = path.join(path.dirname(require.resolve('govuk-frontend/package.json')), 'dist')
 
@@ -16,6 +19,7 @@ const viewsDir = path.join(__dirname, '..', 'views')
 export interface Services {
   companiesHouse: CompaniesHouse
   postcodes: PostcodeLookup
+  funding: FundingData
 }
 
 // Uses made-up Companies House data when running locally without an API key.
@@ -31,7 +35,7 @@ export function createServices (config: Config): Services {
     companiesHouse = new FakeCompaniesHouse()
   }
 
-  return { companiesHouse, postcodes: new PostcodesIo() }
+  return { companiesHouse, postcodes: new PostcodesIo(), funding: loadFunding() }
 }
 
 export function createApp (config: Config, services: Services = createServices(config)): Express {
@@ -88,7 +92,9 @@ export function createApp (config: Config, services: Services = createServices(c
     res.render('index')
   })
 
-  app.use(journeyRoutes({ ...services, sessionSecret: config.sessionSecret, production: config.production }))
+  const answers = session({ secret: config.sessionSecret, production: config.production })
+  app.use(journeyRoutes({ ...services, session: answers }))
+  app.use(fundingRoutes({ funding: services.funding, session: answers }))
 
   app.use((req, res) => {
     res.status(404).render('404')

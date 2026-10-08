@@ -1,0 +1,52 @@
+{% extends "journey/layout.njk" %}
+
+{% from "govuk/components/details/macro.njk" import govukDetails %}
+{% from "govuk/components/inset-text/macro.njk" import govukInsetText %}
+
+{% set title = "Relevant funding for your timeline and goals" %}
+{% set returnTo = "/results" %}
+
+{% block page %}
+  <h1 class="govuk-heading-l">{{ title }}</h1>
+
+  {% include "funding/example-warning.njk" %}
+
+  {% set insetHtml %}
+    <p class="govuk-body">These are based on your answers about <strong>{{ company.name }}</strong>.</p>
+    <p class="govuk-body"><a class="govuk-link" href="/check-answers">Change your answers</a></p>
+  {% endset %}
+  {{ govukInsetText({ html: insetHtml }) }}
+
+  <p class="govuk-body"><a class="govuk-link" href="/shortlist">Your shortlist ({{ shortlistCount }})</a></p>
+
+  {% for group in groups %}
+    <h2 class="govuk-heading-l govuk-!-margin-top-8">{{ group.heading }}</h2>
+    <p class="govuk-body">{{ group.intro }}</p>
+
+    {% for card in group.mostRelevant %}
+      {% include "funding/card.njk" %}
+    {% endfor %}
+
+    {% if group.possibleFit.length %}
+      {% if group.mostRelevant.length %}
+        {% set othersHtml %}
+          {% for card in group.possibleFit %}
+            {% include "funding/card.njk" %}
+          {% endfor %}
+        {% endset %}
+        {{ govukDetails({
+          summaryText: "Show " + group.possibleFit.length + " other " + group.plural + " that may be suitable",
+          html: othersHtml
+        }) }}
+      {% else %}
+        <p class="govuk-body">None of these are a close match for your answers, but you may still be able to apply.</p>
+        {% for card in group.possibleFit %}
+          {% include "funding/card.njk" %}
+        {% endfor %}
+      {% endif %}
+    {% endif %}
+  {% else %}
+    <h2 class="govuk-heading-m">We could not find any funding for your answers</h2>
+    <p class="govuk-body">You can <a class="govuk-link" href="/check-answers">change your answers</a> to see other options.</p>
+  {% endfor %}
+{% endblock %}

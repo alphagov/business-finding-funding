@@ -19,4 +19,6 @@ export interface Answers {
   timeframe?: string
   matchFunding?: string
   equity?: string
+  // Ids of the funding schemes the visitor has shortlisted.
+  shortlist?: string[]
 }

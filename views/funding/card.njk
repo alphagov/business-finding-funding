@@ -1,0 +1,36 @@
+{# A funding scheme. Expects `card` and `returnTo`. #}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/summary-list/macro.njk" import govukSummaryList %}
+{% from "govuk/components/tag/macro.njk" import govukTag %}
+<div class="govuk-summary-card" id="{{ card.scheme.id }}">
+  <div class="govuk-summary-card__title-wrapper">
+    <h3 class="govuk-summary-card__title">
+      {{ card.scheme.name }}
+      <span class="govuk-caption-m govuk-!-margin-top-1">{{ card.scheme.provider }}</span>
+    </h3>
+    <div>
+      {% if card.tag %}
+        {{ govukTag({ text: card.tag.text, classes: card.tag.classes + " govuk-!-margin-bottom-2" }) }}
+      {% endif %}
+      <form method="post" action="/shortlist" novalidate>
+        <input type="hidden" name="scheme" value="{{ card.scheme.id }}">
+        <input type="hidden" name="returnTo" value="{{ returnTo }}">
+        <input type="hidden" name="action" value="{{ 'remove' if card.shortlisted else 'add' }}">
+        {{ govukButton({
+          html: ("Remove from shortlist" if card.shortlisted else "Add to shortlist") + '<span class="govuk-visually-hidden">: ' + (card.scheme.name | escape) + '</span>',
+          classes: "govuk-button--secondary govuk-!-margin-bottom-0"
+        }) }}
+      </form>
+    </div>
+  </div>
+  <div class="govuk-summary-card__content">
+    <p class="govuk-body">{{ card.scheme.summary }}</p>
+
+    {{ govukSummaryList({ rows: card.rows }) }}
+
+    <p class="govuk-body-s govuk-!-margin-bottom-2">Details last checked {{ card.checkedOn }}</p>
+    <p class="govuk-body govuk-!-margin-bottom-0">
+      <a class="govuk-link" href="{{ card.scheme.url }}" target="_blank" rel="noopener noreferrer">Find out more about {{ card.scheme.name }} (opens in new tab)</a>
+    </p>
+  </div>
+</div>

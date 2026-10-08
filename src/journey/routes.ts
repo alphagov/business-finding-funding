@@ -1,7 +1,6 @@
-import express, { type Request, type Response, type Router } from 'express'
+import express, { type Request, type RequestHandler, type Response, type Router } from 'express'
 import { isCompanyNumber, type CompaniesHouse } from '../companies-house'
 import { normalisePostcode, type Area, type PostcodeLookup } from '../postcodes'
-import { session } from '../session'
 import type { Answers } from './answers'
 import { companyStatus, formatDate, linesHtml, tradingHistory } from './format'
 import { AMOUNTS, PURPOSES, QUESTIONS, TIMEFRAMES, YES_NO_NOT_SURE, label, validate, type ChoiceQuestion, type Option } from './questions'
@@ -11,8 +10,7 @@ import { CHECK_ANSWERS, JOURNEY_PATHS, canVisit, nextPath, previousPath, tidy } 
 interface JourneyOptions {
   companiesHouse: CompaniesHouse
   postcodes: PostcodeLookup
-  sessionSecret?: string
-  production: boolean
+  session: RequestHandler
 }
 
 const MAX_SEARCH_LENGTH = 160
@@ -46,13 +44,13 @@ function withArea (answers: Answers, area: Area | undefined): Answers {
   return { ...answers, area, areaConfirmed: false, premisesInArea: undefined }
 }
 
-export function journeyRoutes ({ companiesHouse, postcodes, sessionSecret, production }: JourneyOptions): Router {
+export function journeyRoutes ({ companiesHouse, postcodes, session }: JourneyOptions): Router {
   const router = express.Router()
 
   // Every page sends the visitor to the right question if they have skipped
   // ahead, or if their answers have been lost, for example after closing
   // the browser.
-  router.use(JOURNEY_PATHS, session({ secret: sessionSecret, production }), express.urlencoded({ extended: false }), (req, res, next) => {
+  router.use(JOURNEY_PATHS, session, express.urlencoded({ extended: false }), (req, res, next) => {
     if (canVisit(req.baseUrl, req.session.answers)) return next()
     res.redirect(nextPath(req.session.answers))
   })

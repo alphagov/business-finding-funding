@@ -4,7 +4,9 @@ The Find funding for your business service, owned by the GOV.UK Business team (`
 
 It is written in [TypeScript](https://www.typescriptlang.org/) and built with [Express](https://expressjs.com/), [Nunjucks](https://mozilla.github.io/nunjucks/) and the [GOV.UK Design System](https://design-system.service.gov.uk/) (`govuk-frontend`). It runs on Heroku.
 
-So far it asks about the visitor's company, using Companies House, the local authority area they want funding in, and what they need the funding for. It does not search for funding yet.
+It asks about the visitor's company, using Companies House, the local authority area they want funding in, and what they need the funding for. It then shows funding schemes that match, which they can add to a shortlist.
+
+The funding schemes are made-up examples until the real data is ready. See [Funding data](#funding-data).
 
 ## What it includes
 
@@ -27,6 +29,8 @@ So far it asks about the visitor's company, using Companies House, the local aut
 | `/match-funding` | Could your business cover part of the costs itself? |
 | `/equity`     | Are you open to giving investors a stake in your business? (only if the business may not be able to cover part of the costs) |
 | `/check-answers` | Check your answers                                |
+| `/results`    | Funding schemes that match the answers, grouped into loans, grants and equity finance |
+| `/shortlist`  | Schemes the visitor has added to their shortlist     |
 | `/password`   | Asks for the site password                           |
 | `/health`     | Health check that returns `{"status":"ok"}`          |
 | `/info`       | App version, Node.js version, Heroku stack and operating system (needs the password) |
@@ -50,6 +54,11 @@ Every response also sends an `X-Robots-Tag: noindex, nofollow` header so the sit
 | `src/journey/questions.ts` | The questions answered by choosing from a list: wording, options and error messages |
 | `src/journey/sectors.ts` | The sectors, and how they are suggested from SIC codes   |
 | `src/journey/routes.ts` | The Express routes for the question pages                 |
+| `src/funding/schemes.ts` | The format of the funding data, and the checks run on it when the app starts |
+| `src/funding/match.ts` | The rules for which schemes to show and which are most relevant |
+| `src/funding/format.ts` | How schemes are shown on the results and shortlist pages |
+| `src/funding/routes.ts` | The Express routes for the results and shortlist          |
+| `data/funding-schemes.json` | The funding schemes                                   |
 | `src/info.ts`        | Builds the `/info` response                                     |
 | `views/`             | Nunjucks page templates                                         |
 | `test/`              | Tests, written in TypeScript                                    |
@@ -59,6 +68,33 @@ The app keeps nothing in memory or on local disk between requests, and takes all
 The next page is always the first question that applies and has not been answered. This means the change links on the check answers page return there once any new questions have been answered, and answers to questions that stop applying are removed.
 
 As the service grows, keep its rules (for example, matching businesses to funding schemes) in their own modules, separate from the Express routes, so they can be tested and moved on their own.
+
+## Funding data
+
+The funding schemes are in `data/funding-schemes.json`. While `example` is `true` in that file, the results and shortlist pages say the schemes are made up and not real.
+
+Each scheme has:
+
+| Field | Required | What it is |
+| ----- | -------- | ---------- |
+| `id` | Yes | A unique name using lower case letters, numbers and hyphens, for example `growth-guarantee-scheme`. Shortlists store this, so do not change it once published |
+| `type` | Yes | `loan`, `grant` or `equity` |
+| `name`, `provider`, `summary` | Yes | Shown on the scheme's card |
+| `url` | Yes | The provider's page about the scheme, starting `https://` |
+| `checkedOn` | Yes | When the details were last checked with the provider, like `2026-10-08` |
+| `eligibility` | Yes | A list of who can apply |
+| `areas` | No | Where the scheme is available: lists of `countries` (for example `England`), `regions` (for example `North West`) and `localAuthorities` (ONS codes, for example `E08000003` for Manchester). Leave out for the whole of the UK |
+| `amount` | No | `min` and `max` in pounds. Leave out either if there is no limit |
+| `sectors`, `purposes` | No | The answer values from `src/journey/sectors.ts` and `src/journey/questions.ts` the scheme is for. Leave out if it is for all |
+| `closesOn` | No | The last day to apply. Closed schemes are not shown |
+| `matchFundingRequired` | No | `true` if the business must pay part of the costs |
+| `interestRate`, `repaymentTerm`, `fees` | No | Shown for loans |
+| `contribution`, `decisionTime` | No | Shown for grants |
+| `investmentType` | No | Shown for equity |
+
+The app checks the file when it starts and will not start if anything is wrong. `npm test` checks it too.
+
+Which schemes are shown, and which are "most relevant", is decided in `src/funding/match.ts`. The rules are described at the top of that file. They are a starting point and need agreeing with policy.
 
 ## Settings
 
