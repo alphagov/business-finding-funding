@@ -7,10 +7,10 @@
 
   <p class="govuk-body">We’ll use this to check for local funding opportunities, as well as national ones.</p>
 
-  <form method="post" action="/confirm-area" novalidate>
+  <form method="post" action="{{ action }}" novalidate>
     <div class="govuk-button-group">
       {{ govukButton({ text: "Continue" }) }}
-      <a class="govuk-link" href="/postcode">Use a different postcode</a>
+      <a class="govuk-link" href="{{ changeLink }}">Use a different postcode</a>
     </div>
   </form>
 {% endblock %}

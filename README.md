@@ -4,7 +4,7 @@ The Find funding for your business service, owned by the GOV.UK Business team (`
 
 It is written in [TypeScript](https://www.typescriptlang.org/) and built with [Express](https://expressjs.com/), [Nunjucks](https://mozilla.github.io/nunjucks/) and the [GOV.UK Design System](https://design-system.service.gov.uk/) (`govuk-frontend`). It runs on Heroku.
 
-So far it asks which company the visitor runs, using Companies House, and which local authority area they want funding in. It does not search for funding yet.
+So far it asks about the visitor's company, using Companies House, the local authority area they want funding in, and what they need the funding for. It does not search for funding yet.
 
 ## What it includes
 
@@ -17,7 +17,16 @@ So far it asks which company the visitor runs, using Companies House, and which 
 | `/registered-address` | Use the registered address to find funding? (skipped if it has no UK postcode) |
 | `/postcode`   | Postcode of the business premises or area             |
 | `/confirm-area` | Shows the local authority for the postcode          |
-| `/answers`    | Answers so far. Will become the check your answers page |
+| `/sector`     | What sector is your business in? Suggested from the company's SIC codes |
+| `/purpose`    | What best describes what you're trying to achieve?  |
+| `/premises-area` | Is the property you want to buy or rent in the funding area? (only if moving or expanding premises) |
+| `/premises-postcode` | Postcode of the property (only if it is somewhere else) |
+| `/confirm-premises-area` | Shows the local authority for the property's postcode |
+| `/amount`     | How much money do you need?                          |
+| `/timeframe`  | When do you need the funding?                        |
+| `/match-funding` | Could your business cover part of the costs itself? |
+| `/equity`     | Are you open to giving investors a stake in your business? (only if the business may not be able to cover part of the costs) |
+| `/check-answers` | Check your answers                                |
 | `/password`   | Asks for the site password                           |
 | `/health`     | Health check that returns `{"status":"ok"}`          |
 | `/info`       | App version, Node.js version, Heroku stack and operating system (needs the password) |
@@ -37,12 +46,17 @@ Every response also sends an `X-Robots-Tag: noindex, nofollow` header so the sit
 | `src/session.ts`     | Keeps the visitor's answers in a signed cookie                  |
 | `src/companies-house.ts` | Searches for companies and gets their details from Companies House |
 | `src/postcodes.ts`   | Checks postcodes and finds their local authority using [postcodes.io](https://postcodes.io/) |
-| `src/journey/`       | The question pages, and how answers are formatted for display  |
+| `src/journey/steps.ts` | The order of the questions, when each one applies, and which page comes next |
+| `src/journey/questions.ts` | The questions answered by choosing from a list: wording, options and error messages |
+| `src/journey/sectors.ts` | The sectors, and how they are suggested from SIC codes   |
+| `src/journey/routes.ts` | The Express routes for the question pages                 |
 | `src/info.ts`        | Builds the `/info` response                                     |
 | `views/`             | Nunjucks page templates                                         |
 | `test/`              | Tests, written in TypeScript                                    |
 
 The app keeps nothing in memory or on local disk between requests, and takes all its settings from environment variables. The visitor's answers are kept in a cookie, signed so they cannot be changed. This means it can move from Heroku to another platform, such as AWS Lambda, by replacing `src/server.ts` rather than rewriting the app.
+
+The next page is always the first question that applies and has not been answered. This means the change links on the check answers page return there once any new questions have been answered, and answers to questions that stop applying are removed.
 
 As the service grows, keep its rules (for example, matching businesses to funding schemes) in their own modules, separate from the Express routes, so they can be tested and moved on their own.
 

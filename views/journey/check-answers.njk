@@ -1,0 +1,13 @@
+{% extends "journey/layout.njk" %}
+
+{% from "govuk/components/inset-text/macro.njk" import govukInsetText %}
+
+{% set title = "Check your answers" %}
+
+{% block page %}
+  <h1 class="govuk-heading-l">{{ title }}</h1>
+
+  {{ govukSummaryList({ rows: rows }) }}
+
+  {{ govukInsetText({ text: "The funding results have not been built yet." }) }}
+{% endblock %}
