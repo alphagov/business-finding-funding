@@ -1,0 +1,37 @@
+{% extends "journey/layout.njk" %}
+
+{% from "govuk/components/checkboxes/macro.njk" import govukCheckboxes %}
+
+{% block page %}
+  {% set items = [] %}
+  {% for option in question.options %}
+    {% if option.exclusive %}
+      {% set items = (items.push({ divider: "or" }), items) %}
+    {% endif %}
+    {% set items = (items.push({
+      value: option.value,
+      text: option.text,
+      checked: option.value in values,
+      behaviour: "exclusive" if option.exclusive and question.multiple else undefined
+    }), items) %}
+  {% endfor %}
+
+  {% set params = {
+    name: question.answer,
+    idPrefix: question.answer,
+    fieldset: { legend: { text: title, isPageHeading: true, classes: "govuk-fieldset__legend--l" } },
+    hint: { html: hintHtml } if hintHtml else undefined,
+    items: items,
+    errorMessage: error and { text: error.text }
+  } %}
+
+  <form method="post" action="{{ question.path }}" novalidate>
+    {% if question.multiple %}
+      {{ govukCheckboxes(params) }}
+    {% else %}
+      {{ govukRadios(params) }}
+    {% endif %}
+
+    {{ govukButton({ text: "Continue" }) }}
+  </form>
+{% endblock %}

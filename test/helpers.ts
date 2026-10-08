@@ -36,7 +36,7 @@ export class Browser {
     return this.request(path)
   }
 
-  post (path: string, form: Record<string, string> = {}): Promise<Response> {
+  post (path: string, form: Record<string, string> | URLSearchParams = {}): Promise<Response> {
     return this.request(path, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
