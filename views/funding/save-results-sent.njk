@@ -1,0 +1,13 @@
+{% extends "journey/layout.njk" %}
+
+{% set title = "Check your email" %}
+
+{% block page %}
+  <h1 class="govuk-heading-l">{{ title }}</h1>
+
+  <p class="govuk-body">We’ve sent a link to <strong>{{ emailAddress }}</strong>.</p>
+  <p class="govuk-body">Use it to come back to your funding results and shortlist. It will work until {{ expiryDate }}.</p>
+  <p class="govuk-body">If the email has not arrived in a few minutes, check your spam folder or <a class="govuk-link" href="/save-results">send the link again</a>.</p>
+
+  <p class="govuk-body"><a class="govuk-link" href="/results">Back to your funding results</a></p>
+{% endblock %}

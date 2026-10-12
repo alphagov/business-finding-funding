@@ -5,7 +5,7 @@ import { formatAmount, schemeRows } from '../src/funding/format'
 import { coversArea, findFunding, matchScheme } from '../src/funding/match'
 import { checkSchemes, loadFunding, type Scheme } from '../src/funding/schemes'
 import type { Area } from '../src/postcodes'
-import { Browser, startServer, type TestServer } from './helpers'
+import { answerEverything, Browser, startServer, type TestServer } from './helpers'
 
 const MANCHESTER: Area = { postcode: 'M60 2LA', localAuthority: 'Manchester', localAuthorityCode: 'E08000003', region: 'North West', country: 'England' }
 const LEEDS: Area = { postcode: 'LS1 1UR', localAuthority: 'Leeds', localAuthorityCode: 'E08000035', region: 'Yorkshire and The Humber', country: 'England' }
@@ -150,25 +150,6 @@ before(async () => {
 after(() => {
   server.close()
 })
-
-async function answerEverything (b: Browser, matchFunding = 'yes'): Promise<void> {
-  for (const [path, form] of [
-    ['/business-name', 'companyName=example'],
-    ['/select-business', 'companyNumber=00000001'],
-    ['/confirm-business', ''],
-    ['/registered-address', 'useRegisteredAddress=yes'],
-    ['/confirm-area', ''],
-    ['/sector', 'sectors=manufacturing'],
-    ['/purpose', 'purposes=equipment&purposes=energy'],
-    ['/amount', 'amounts=10k-to-25k'],
-    ['/timeframe', 'timeframe=1-to-3-months'],
-    ['/match-funding', `matchFunding=${matchFunding}`],
-    ...(matchFunding === 'yes' ? [] : [['/equity', 'equity=yes']])
-  ]) {
-    const res = await b.post(path, new URLSearchParams(form))
-    assert.equal(res.status, 302, path)
-  }
-}
 
 test('results need every question answered', async () => {
   for (const path of ['/results', '/shortlist']) {

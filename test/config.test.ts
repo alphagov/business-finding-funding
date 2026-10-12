@@ -8,21 +8,44 @@ test('config uses defaults when nothing is set', () => {
     production: false,
     sitePassword: undefined,
     sessionSecret: undefined,
-    companiesHouseApiKey: undefined
+    companiesHouseApiKey: undefined,
+    notifyApiKey: undefined,
+    notifyResultsTemplateId: undefined,
+    serviceUrl: undefined
   })
 })
 
 test('config reads settings from the environment', () => {
   assert.deepEqual(
-    loadConfig({ PORT: '8080', NODE_ENV: 'production', SITE_PASSWORD: 'secret', SESSION_SECRET: 'session', COMPANIES_HOUSE_API_KEY: 'key' }),
-    { port: 8080, production: true, sitePassword: 'secret', sessionSecret: 'session', companiesHouseApiKey: 'key' }
+    loadConfig({
+      PORT: '8080',
+      NODE_ENV: 'production',
+      SITE_PASSWORD: 'secret',
+      SESSION_SECRET: 'session',
+      COMPANIES_HOUSE_API_KEY: 'key',
+      NOTIFY_API_KEY: 'notify-key',
+      NOTIFY_RESULTS_TEMPLATE_ID: 'template',
+      SERVICE_URL: 'https://www.example.gov.uk/'
+    }),
+    {
+      port: 8080,
+      production: true,
+      sitePassword: 'secret',
+      sessionSecret: 'session',
+      companiesHouseApiKey: 'key',
+      notifyApiKey: 'notify-key',
+      notifyResultsTemplateId: 'template',
+      serviceUrl: 'https://www.example.gov.uk'
+    }
   )
 })
 
 test('empty settings count as not set', () => {
-  const config = loadConfig({ SITE_PASSWORD: '', SESSION_SECRET: '', COMPANIES_HOUSE_API_KEY: '' })
+  const config = loadConfig({ SITE_PASSWORD: '', SESSION_SECRET: '', COMPANIES_HOUSE_API_KEY: '', NOTIFY_API_KEY: '', SERVICE_URL: '' })
 
   assert.equal(config.sitePassword, undefined)
   assert.equal(config.sessionSecret, undefined)
   assert.equal(config.companiesHouseApiKey, undefined)
+  assert.equal(config.notifyApiKey, undefined)
+  assert.equal(config.serviceUrl, undefined)
 })

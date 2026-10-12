@@ -4,6 +4,9 @@ export interface Config {
   sitePassword?: string
   sessionSecret?: string
   companiesHouseApiKey?: string
+  notifyApiKey?: string
+  notifyResultsTemplateId?: string
+  serviceUrl?: string
 }
 
 // All settings come from environment variables, read in one place, so the
@@ -14,6 +17,10 @@ export function loadConfig (env: NodeJS.ProcessEnv = process.env): Config {
     production: env.NODE_ENV === 'production',
     sitePassword: env.SITE_PASSWORD || undefined,
     sessionSecret: env.SESSION_SECRET || undefined,
-    companiesHouseApiKey: env.COMPANIES_HOUSE_API_KEY || undefined
+    companiesHouseApiKey: env.COMPANIES_HOUSE_API_KEY || undefined,
+    notifyApiKey: env.NOTIFY_API_KEY || undefined,
+    notifyResultsTemplateId: env.NOTIFY_RESULTS_TEMPLATE_ID || undefined,
+    // Without a trailing slash, for example https://www.example.gov.uk
+    serviceUrl: env.SERVICE_URL?.replace(/\/+$/, '') || undefined
   }
 }
