@@ -8,6 +8,8 @@ It asks about the visitor's company, using Companies House, the local authority 
 
 The funding schemes are made-up examples until the real data is ready. See [Funding data](#funding-data).
 
+This repository also holds a proof of concept of the funding data API, a read-only JSON API over the same schemes. Find funding can read its schemes from it. See [Funding data API](#funding-data-api).
+
 ## What it includes
 
 | Path          | Purpose                                              |
@@ -57,6 +59,7 @@ Every response also sends an `X-Robots-Tag: noindex, nofollow` header so the sit
 | `src/journey/sectors.ts` | The sectors, and how they are suggested from SIC codes   |
 | `src/journey/routes.ts` | The Express routes for the question pages                 |
 | `src/funding/schemes.ts` | The format of the funding data, and the checks run on it when the app starts |
+| `src/funding/source.ts` | Where the schemes come from: the data file, or the funding data API |
 | `src/funding/match.ts` | The rules for which schemes to show and which are most relevant |
 | `src/funding/format.ts` | How schemes are shown on the results and shortlist pages |
 | `src/funding/routes.ts` | The Express routes for the results, shortlist and emailed link |
@@ -64,6 +67,9 @@ Every response also sends an `X-Robots-Tag: noindex, nofollow` header so the sit
 | `src/notify.ts`      | Sends emails using [GOV.UK Notify](https://www.notifications.service.gov.uk/) |
 | `data/funding-schemes.json` | The funding schemes                                   |
 | `src/info.ts`        | Builds the `/info` response                                     |
+| `src/api/app.ts`     | The funding data API. See [Funding data API](#funding-data-api) |
+| `src/api/openapi.ts` | The API's OpenAPI specification, including the published scheme format |
+| `src/api/server.ts`  | Starts the API on a port                                        |
 | `views/`             | Nunjucks page templates                                         |
 | `test/`              | Tests, written in TypeScript                                    |
 
@@ -96,9 +102,38 @@ Each scheme has:
 | `contribution`, `decisionTime` | No | Shown for grants |
 | `investmentType` | No | Shown for equity |
 
-The app checks the file when it starts and will not start if anything is wrong. `npm test` checks it too.
+The app checks the file when it starts and will not start if anything is wrong. `npm test` checks it too, including against the scheme format published in the API specification.
 
 Which schemes are shown, and which are "most relevant", is decided in `src/funding/match.ts`. The rules are described at the top of that file. They are a starting point and need agreeing with policy.
+
+## Funding data API
+
+A proof of concept of a read-only API over the funding data, so that Find funding, other GOV.UK Business services and AI assistants can all use one source rather than copies. It is not deployed yet. It is kept apart from the Find funding pages, sharing only the scheme format, so it can move to its own repository and hosting.
+
+| Path | Purpose |
+| ---- | ------- |
+| `/v1/schemes` | Lists the schemes. Filter with `type`, `sector` and `purpose`, repeating a filter to match any of its values, for example `?type=loan&type=grant` |
+| `/v1/schemes/{id}` | One scheme |
+| `/openapi.json` | The OpenAPI 3.1 specification |
+| `/docs` | Documentation, using Swagger UI |
+| `/health` | Health check that returns `{"status":"ok"}` |
+
+- The data is public, so the API needs no password or API key, and any website can read it. There is no way to change data through the API: changes are made to the data file by pull request.
+- Errors use the [RFC 9457](https://www.rfc-editor.org/rfc/rfc9457) problem format. Filters that are not recognised are errors, not ignored.
+- Responses can be cached for 5 minutes. Find funding keeps the schemes for 5 minutes, and uses its last copy if the API cannot be reached.
+- The tests check the data file and every response against the specification, so the three cannot drift apart.
+- Swagger UI is loaded from jsDelivr, pinned to one version and checked against an integrity hash. It is not installed from npm, because that package runs an install script that sends usage data to a third party.
+
+To run the API and Find funding together locally:
+
+```sh
+npm run dev:api
+FUNDING_API_URL=http://localhost:3001 npm run dev
+```
+
+The API runs on port 3001 unless `PORT` is set. Its documentation is at http://localhost:3001/docs.
+
+Deploying it needs its own Heroku app, started with `npm run start:api`.
 
 ## Settings
 
@@ -110,6 +145,7 @@ Which schemes are shown, and which are "most relevant", is decided in `src/fundi
 | `NOTIFY_API_KEY`          | A GOV.UK Notify API key, for emailing links to the results |
 | `NOTIFY_RESULTS_TEMPLATE_ID` | The ID of the Notify email template for the link. See [Emailing a link to the results](#emailing-a-link-to-the-results) |
 | `SERVICE_URL`             | The address of the site, for example `https://govuk-business-finding-funding-906e3c5bb434.herokuapp.com`, used in emailed links. Needed in production |
+| `FUNDING_API_URL`         | The address of the funding data API, for example `http://localhost:3001`. Leave out to read the schemes from `data/funding-schemes.json` |
 
 On Heroku, set these under **Settings > Config Vars**.
 
@@ -119,6 +155,7 @@ When running locally, all of them are optional:
 - without `COMPANIES_HOUSE_API_KEY`, the app uses made-up companies from `src/companies-house.ts`. Search for "example" to see them
 - without `NOTIFY_API_KEY`, no emails are sent. The link that would have been emailed is written to the terminal instead
 - without `SERVICE_URL`, emailed links use the address the page was requested from
+- without `FUNDING_API_URL`, the schemes are read from `data/funding-schemes.json`
 
 In production, the question pages show an error page if `SESSION_SECRET` or `COMPANIES_HOUSE_API_KEY` is missing, and the reason is written to the logs. The start page and `/health` still work.
 
