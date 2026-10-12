@@ -132,21 +132,31 @@ Visitors can ask for an email with a link back to their results and shortlist. T
 
 To set it up in [GOV.UK Notify](https://www.notifications.service.gov.uk/):
 
-1. Create an email template. It must use the placeholders `((business_name))`, `((link))` and `((expiry_date))`, for example:
+1. Create an email template with the subject `Your funding options for ((business_name))`. The message must use the placeholders `((business_name))`, `((link))` and `((expiry_date))`, for example:
 
-   > **Subject:** Your funding options for ((business_name))
-   >
-   > You asked for a link to your funding results and shortlist for ((business_name)).
-   >
-   > Use this link to see them again:
-   >
-   > ((link))
-   >
-   > The link will work until ((expiry_date)). Do not forward this email, because anyone with the link can see your answers.
-   >
-   > If you did not ask for this email, you can ignore it.
-   >
-   > Find funding for your business
+   ```text
+   You asked for a link to your funding results and shortlist for ((business_name)).
+
+   # See your results
+
+   ((link))
+
+   ^ The link will work until ((expiry_date)). Anyone with the link can see your answers, so do not forward this email.
+
+   # Before you apply
+
+   Check each scheme’s eligibility and closing date on the provider’s website. Schemes can change or close at short notice.
+
+   ---
+
+   If you did not ask for this email, you can ignore it. No one can see your answers without the link.
+
+   Find funding for your business
+
+   This is a test service. It is not a real service.
+   ```
+
+   In Notify, `#` makes a heading, `^` makes inset text and `---` makes a horizontal line.
 
 2. Set `NOTIFY_RESULTS_TEMPLATE_ID` to the template's ID.
 3. Create an API key under **API integration > API keys** and set it as `NOTIFY_API_KEY`. While the Notify service is in trial mode, use a **Team and guest list** key. Emails can then only go to members of the Notify team and addresses on its guest list. Anyone else is told that the site is a trial.
