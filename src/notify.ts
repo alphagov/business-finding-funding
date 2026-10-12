@@ -49,6 +49,8 @@ export class NotifyApi implements Notify {
 
   // Notify takes a JSON Web Token signed with the key's secret, made fresh
   // for each request because Notify only accepts tokens up to 30 seconds old.
+  // Notify only accepts HS256 (HMAC-SHA256) signatures. This is not password
+  // hashing: the secret is a random UUID, and the result is not stored.
   token (now = Date.now()): string {
     const unsigned = `${base64url({ typ: 'JWT', alg: 'HS256' })}.${base64url({ iss: this.serviceId, iat: Math.floor(now / 1000) })}`
     return `${unsigned}.${crypto.createHmac('sha256', this.secret).update(unsigned).digest('base64url')}`
