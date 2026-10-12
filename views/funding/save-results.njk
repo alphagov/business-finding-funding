@@ -1,0 +1,26 @@
+{% extends "journey/layout.njk" %}
+
+{% set title = "Get a link to your results" %}
+
+{% block page %}
+  <form method="post" action="/save-results" novalidate>
+    <h1 class="govuk-heading-l">{{ title }}</h1>
+
+    <p class="govuk-body">We’ll email you a link so you can come back to your funding results and shortlist for <strong>{{ company.name }}</strong>.</p>
+    <p class="govuk-body">The link will work for {{ linkDays }} days. Anyone with the link can see your answers, so do not forward the email.</p>
+
+    {{ govukInput({
+      label: { text: "Email address", classes: "govuk-label--m" },
+      hint: { text: "We only use this to send you the link" },
+      id: "email",
+      name: "email",
+      type: "email",
+      value: value,
+      autocomplete: "email",
+      spellcheck: false,
+      errorMessage: error and { text: error.text }
+    }) }}
+
+    {{ govukButton({ text: "Send link" }) }}
+  </form>
+{% endblock %}

@@ -48,11 +48,7 @@ export function decode (cookie: string, secret: string): Answers {
 // app stores nothing itself. The cookie lasts until the browser is closed.
 export function session ({ secret, production }: SessionOptions): RequestHandler {
   if (!secret) {
-    if (production) {
-      return (req, res, next) => { next(new Error('SESSION_SECRET is not set')) }
-    }
-    console.warn('SESSION_SECRET is not set, so answers will be lost when the app restarts')
-    secret = crypto.randomBytes(32).toString('hex')
+    return (req, res, next) => { next(new Error('SESSION_SECRET is not set')) }
   }
   const key = secret
 

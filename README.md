@@ -31,6 +31,8 @@ The funding schemes are made-up examples until the real data is ready. See [Fund
 | `/check-answers` | Check your answers                                |
 | `/results`    | Funding schemes that match the answers, grouped into loans, grants and equity finance |
 | `/shortlist`  | Schemes the visitor has added to their shortlist     |
+| `/save-results` | Emails a link to the results and shortlist. See [Emailing a link to the results](#emailing-a-link-to-the-results) |
+| `/saved-results/*` | Where the emailed link goes. Brings back the answers and shows the results |
 | `/password`   | Asks for the site password                           |
 | `/health`     | Health check that returns `{"status":"ok"}`          |
 | `/info`       | App version, Node.js version, Heroku stack and operating system (needs the password) |
@@ -57,7 +59,9 @@ Every response also sends an `X-Robots-Tag: noindex, nofollow` header so the sit
 | `src/funding/schemes.ts` | The format of the funding data, and the checks run on it when the app starts |
 | `src/funding/match.ts` | The rules for which schemes to show and which are most relevant |
 | `src/funding/format.ts` | How schemes are shown on the results and shortlist pages |
-| `src/funding/routes.ts` | The Express routes for the results and shortlist          |
+| `src/funding/routes.ts` | The Express routes for the results, shortlist and emailed link |
+| `src/funding/results-link.ts` | Puts the answers into the emailed link, encrypted, and reads them back |
+| `src/notify.ts`      | Sends emails using [GOV.UK Notify](https://www.notifications.service.gov.uk/) |
 | `data/funding-schemes.json` | The funding schemes                                   |
 | `src/info.ts`        | Builds the `/info` response                                     |
 | `views/`             | Nunjucks page templates                                         |
@@ -103,17 +107,49 @@ Which schemes are shown, and which are "most relevant", is decided in `src/fundi
 | `SITE_PASSWORD`           | The shared password. See [Password protection](#password-protection) |
 | `SESSION_SECRET`          | A long random value used to sign the answers cookie. Changing it clears everyone's answers |
 | `COMPANIES_HOUSE_API_KEY` | A [Companies House API key](https://developer.company-information.service.gov.uk/) for the live service. GOV.UK Business team members can ask the team for it |
+| `NOTIFY_API_KEY`          | A GOV.UK Notify API key, for emailing links to the results |
+| `NOTIFY_RESULTS_TEMPLATE_ID` | The ID of the Notify email template for the link. See [Emailing a link to the results](#emailing-a-link-to-the-results) |
+| `SERVICE_URL`             | The address of the site, for example `https://govuk-business-finding-funding-906e3c5bb434.herokuapp.com`, used in emailed links. Needed in production |
 
 On Heroku, set these under **Settings > Config Vars**.
 
-When running locally, all three are optional:
+When running locally, all of them are optional:
 
-- without `SESSION_SECRET`, a new one is made each time the app starts, so answers are lost when it restarts
+- without `SESSION_SECRET`, a new one is made each time the app starts, so answers and emailed links stop working when it restarts
 - without `COMPANIES_HOUSE_API_KEY`, the app uses made-up companies from `src/companies-house.ts`. Search for "example" to see them
+- without `NOTIFY_API_KEY`, no emails are sent. The link that would have been emailed is written to the terminal instead
+- without `SERVICE_URL`, emailed links use the address the page was requested from
 
 In production, the question pages show an error page if `SESSION_SECRET` or `COMPANIES_HOUSE_API_KEY` is missing, and the reason is written to the logs. The start page and `/health` still work.
 
+If `NOTIFY_API_KEY`, `NOTIFY_RESULTS_TEMPLATE_ID` or `SERVICE_URL` is missing in production, the email page says the email could not be sent, and the reason is written to the logs.
+
 The postcode lookup uses the public postcodes.io API and needs no key.
+
+## Emailing a link to the results
+
+Visitors can ask for an email with a link back to their results and shortlist. The link holds their answers, encrypted with a key derived from `SESSION_SECRET`, so the app still stores nothing. Links stop working after 30 days, or if `SESSION_SECRET` changes. The email address is only passed to GOV.UK Notify.
+
+To set it up in [GOV.UK Notify](https://www.notifications.service.gov.uk/):
+
+1. Create an email template. It must use the placeholders `((business_name))`, `((link))` and `((expiry_date))`, for example:
+
+   > **Subject:** Your funding options for ((business_name))
+   >
+   > You asked for a link to your funding results and shortlist for ((business_name)).
+   >
+   > Use this link to see them again:
+   >
+   > ((link))
+   >
+   > The link will work until ((expiry_date)). Do not forward this email, because anyone with the link can see your answers.
+   >
+   > If you did not ask for this email, you can ignore it.
+   >
+   > Find funding for your business
+
+2. Set `NOTIFY_RESULTS_TEMPLATE_ID` to the template's ID.
+3. Create an API key under **API integration > API keys** and set it as `NOTIFY_API_KEY`. While the Notify service is in trial mode, use a **Team and guest list** key. Emails can then only go to members of the Notify team and addresses on its guest list. Anyone else is told that the site is a trial.
 
 ## Password protection
 

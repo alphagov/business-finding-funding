@@ -1,8 +1,10 @@
+import assert from 'node:assert/strict'
 import type { AddressInfo } from 'node:net'
 import { createApp, type Services } from '../src/app'
 import { FakeCompaniesHouse } from '../src/companies-house'
 import type { Config } from '../src/config'
 import { loadFunding } from '../src/funding/schemes'
+import { FakeNotify } from '../src/notify'
 import { FakePostcodes } from '../src/postcodes'
 
 export interface TestServer {
@@ -10,12 +12,12 @@ export interface TestServer {
   close: () => void
 }
 
-// Uses made-up Companies House and postcode data so tests never call the
-// real services, and the example funding schemes.
+// Uses made-up Companies House and postcode data, and a fake Notify, so
+// tests never call the real services, and the example funding schemes.
 export async function startServer (config: Partial<Config> = {}, services: Partial<Services> = {}): Promise<TestServer> {
   const app = createApp(
     { port: 0, production: false, sessionSecret: 'test-session-secret', ...config },
-    { companiesHouse: new FakeCompaniesHouse(), postcodes: new FakePostcodes(), funding: loadFunding(), ...services }
+    { companiesHouse: new FakeCompaniesHouse(), postcodes: new FakePostcodes(), funding: loadFunding(), notify: new FakeNotify(), ...services }
   )
   const server = app.listen(0)
   await new Promise((resolve) => server.once('listening', resolve))
@@ -58,5 +60,25 @@ export class Browser {
       this.cookies.set(name, value.join('='))
     }
     return res
+  }
+}
+
+// Answers every question for EXAMPLE BAKERY LIMITED in Manchester.
+export async function answerEverything (b: Browser, matchFunding = 'yes'): Promise<void> {
+  for (const [path, form] of [
+    ['/business-name', 'companyName=example'],
+    ['/select-business', 'companyNumber=00000001'],
+    ['/confirm-business', ''],
+    ['/registered-address', 'useRegisteredAddress=yes'],
+    ['/confirm-area', ''],
+    ['/sector', 'sectors=manufacturing'],
+    ['/purpose', 'purposes=equipment&purposes=energy'],
+    ['/amount', 'amounts=10k-to-25k'],
+    ['/timeframe', 'timeframe=1-to-3-months'],
+    ['/match-funding', `matchFunding=${matchFunding}`],
+    ...(matchFunding === 'yes' ? [] : [['/equity', 'equity=yes']])
+  ]) {
+    const res = await b.post(path, new URLSearchParams(form))
+    assert.equal(res.status, 302, path)
   }
 }

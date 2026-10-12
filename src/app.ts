@@ -1,3 +1,4 @@
+import crypto from 'node:crypto'
 import path from 'node:path'
 import express, { type Express, type NextFunction, type Request, type Response } from 'express'
 import nunjucks from 'nunjucks'
@@ -7,6 +8,7 @@ import { fundingRoutes } from './funding/routes'
 import { loadFunding, type FundingData } from './funding/schemes'
 import { info } from './info'
 import { journeyRoutes } from './journey/routes'
+import { FakeNotify, missingNotify, NotifyApi, type Notify } from './notify'
 import { passwordProtection } from './password'
 import { PostcodesIo, type PostcodeLookup } from './postcodes'
 import { session } from './session'
@@ -20,9 +22,11 @@ export interface Services {
   companiesHouse: CompaniesHouse
   postcodes: PostcodeLookup
   funding: FundingData
+  notify: Notify
 }
 
-// Uses made-up Companies House data when running locally without an API key.
+// Uses made-up Companies House data, and does not send emails, when running
+// locally without API keys.
 export function createServices (config: Config): Services {
   let companiesHouse: CompaniesHouse
 
@@ -35,7 +39,26 @@ export function createServices (config: Config): Services {
     companiesHouse = new FakeCompaniesHouse()
   }
 
-  return { companiesHouse, postcodes: new PostcodesIo(), funding: loadFunding() }
+  let notify: Notify
+
+  if (config.notifyApiKey) {
+    notify = new NotifyApi(config.notifyApiKey)
+  } else if (config.production) {
+    notify = missingNotify
+  } else {
+    console.warn('NOTIFY_API_KEY is not set, so emails will not be sent')
+    notify = new FakeNotify(true)
+  }
+
+  return { companiesHouse, postcodes: new PostcodesIo(), funding: loadFunding(), notify }
+}
+
+// Locally, a missing SESSION_SECRET is made up when the app starts, so
+// answers and emailed links stop working when it restarts.
+function sessionSecret (config: Config): string | undefined {
+  if (config.sessionSecret || config.production) return config.sessionSecret
+  console.warn('SESSION_SECRET is not set, so answers will be lost when the app restarts')
+  return crypto.randomBytes(32).toString('hex')
 }
 
 export function createApp (config: Config, services: Services = createServices(config)): Express {
@@ -92,9 +115,20 @@ export function createApp (config: Config, services: Services = createServices(c
     res.render('index')
   })
 
-  const answers = session({ secret: config.sessionSecret, production: config.production })
+  const secret = sessionSecret(config)
+  const answers = session({ secret, production: config.production })
   app.use(journeyRoutes({ ...services, session: answers }))
-  app.use(fundingRoutes({ funding: services.funding, session: answers }))
+  app.use(fundingRoutes({
+    funding: services.funding,
+    session: answers,
+    resultsEmail: {
+      notify: services.notify,
+      templateId: config.notifyResultsTemplateId,
+      serviceUrl: config.serviceUrl,
+      secret,
+      production: config.production
+    }
+  }))
 
   app.use((req, res) => {
     res.status(404).render('404')

@@ -1,0 +1,10 @@
+{% extends "journey/layout.njk" %}
+
+{% set title = "This link has expired or does not work" %}
+
+{% block page %}
+  <h1 class="govuk-heading-l">{{ title }}</h1>
+
+  <p class="govuk-body">Links to your results work for {{ linkDays }} days. Check you copied the whole link from the email.</p>
+  <p class="govuk-body"><a class="govuk-link" href="/business-name">Answer the questions again</a> to see your funding options.</p>
+{% endblock %}
