@@ -5,7 +5,7 @@ import nunjucks from 'nunjucks'
 import { CompaniesHouseApi, FakeCompaniesHouse, missingCompaniesHouse, type CompaniesHouse } from './companies-house'
 import type { Config } from './config'
 import { fundingRoutes } from './funding/routes'
-import { loadFunding, type FundingData } from './funding/schemes'
+import { fileFunding, FundingApi, type FundingSource } from './funding/source'
 import { info } from './info'
 import { journeyRoutes } from './journey/routes'
 import { FakeNotify, missingNotify, NotifyApi, type Notify } from './notify'
@@ -21,12 +21,13 @@ const viewsDir = path.join(__dirname, '..', 'views')
 export interface Services {
   companiesHouse: CompaniesHouse
   postcodes: PostcodeLookup
-  funding: FundingData
+  funding: FundingSource
   notify: Notify
 }
 
 // Uses made-up Companies House data, and does not send emails, when running
-// locally without API keys.
+// locally without API keys. Reads the funding schemes from the funding data
+// API when FUNDING_API_URL is set, and from the data file otherwise.
 export function createServices (config: Config): Services {
   let companiesHouse: CompaniesHouse
 
@@ -50,7 +51,9 @@ export function createServices (config: Config): Services {
     notify = new FakeNotify(true)
   }
 
-  return { companiesHouse, postcodes: new PostcodesIo(), funding: loadFunding(), notify }
+  const funding = config.fundingApiUrl ? new FundingApi(config.fundingApiUrl) : fileFunding()
+
+  return { companiesHouse, postcodes: new PostcodesIo(), funding, notify }
 }
 
 // Locally, a missing SESSION_SECRET is made up when the app starts, so
