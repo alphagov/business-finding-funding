@@ -107,11 +107,17 @@ export function checkSchemes (schemes: unknown): string[] {
   return problems
 }
 
-export function loadFunding (file = DATA_FILE): FundingData {
-  const data = JSON.parse(fs.readFileSync(file, 'utf8')) as Partial<FundingData>
-  const problems = checkSchemes(data.schemes)
+// Checks funding data from the file or the funding data API, and throws an
+// error listing every problem.
+export function checkFunding (data: unknown, source: string): FundingData {
+  const { example, schemes } = (data ?? {}) as Partial<FundingData>
+  const problems = checkSchemes(schemes)
 
-  if (typeof data.example !== 'boolean') problems.unshift('example must be true or false')
-  if (problems.length) throw new Error(`Problems with ${path.basename(file)}:\n${problems.join('\n')}`)
-  return data as FundingData
+  if (typeof example !== 'boolean') problems.unshift('example must be true or false')
+  if (problems.length) throw new Error(`Problems with ${source}:\n${problems.join('\n')}`)
+  return { example, schemes } as FundingData
+}
+
+export function loadFunding (file = DATA_FILE): FundingData {
+  return checkFunding(JSON.parse(fs.readFileSync(file, 'utf8')), path.basename(file))
 }
