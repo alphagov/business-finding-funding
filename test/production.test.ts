@@ -52,3 +52,30 @@ test('journey pages show the error page if SESSION_SECRET is not set', async () 
     unconfigured.close()
   }
 })
+
+test('journey pages show the error page if REDIS_URL is not set', async () => {
+  const unconfigured = await startServer({ production: true, sitePassword: 'secret' }, { sessions: undefined })
+  const headers = { 'X-Forwarded-Proto': 'https' }
+  const logged: string[] = []
+  const error = console.error
+  console.error = (err: unknown) => { logged.push(String(err)) }
+
+  try {
+    const signIn = await fetch(`${unconfigured.baseUrl}/password`, {
+      method: 'POST',
+      headers: { ...headers, 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ password: 'secret', returnUrl: '/' }),
+      redirect: 'manual'
+    })
+    const cookie = (signIn.headers.get('set-cookie') ?? '').split(';')[0]
+
+    const journey = await fetch(`${unconfigured.baseUrl}/business-name`, { headers: { ...headers, Cookie: cookie } })
+    assert.equal(journey.status, 500)
+    assert.ok(logged.some((line) => line.includes('REDIS_URL is not set')))
+
+    assert.equal((await fetch(`${unconfigured.baseUrl}/health`, { headers })).status, 200)
+  } finally {
+    console.error = error
+    unconfigured.close()
+  }
+})

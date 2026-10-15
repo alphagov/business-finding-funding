@@ -337,19 +337,33 @@ test('choice questions show an error if they are not answered properly', async (
   assert.match(await timeframe.text(), /href="#timeframe">Select when you need the funding/)
 })
 
-test('a changed answers cookie is ignored', async () => {
-  const res = await fetch(`${server.baseUrl}/confirm-business`, {
-    headers: { Cookie: `answers=${Buffer.from(JSON.stringify({ company: { name: 'X' } })).toString('base64url')}.bad` },
-    redirect: 'manual'
-  })
-  assertRedirect(res, '/business-name')
+test('a session cookie that has been changed is ignored', async () => {
+  const b = browser()
+  await b.post('/business-name', { companyName: 'example' })
+  await b.post('/select-business', { companyNumber: '00000001' })
+  const cookie = b.cookie('session') ?? ''
+  const [id, signature] = cookie.split('.')
+
+  for (const changed of [`${id}x.${signature}`, `${id}.${signature}x`, id, '']) {
+    const res = await fetch(`${server.baseUrl}/confirm-business`, { headers: { Cookie: `session=${changed}` }, redirect: 'manual' })
+    assertRedirect(res, '/business-name')
+  }
 })
 
-test('answers cookie is HttpOnly and SameSite', async () => {
-  const res = await browser().post('/business-name', { companyName: 'example' })
+test('the session cookie only holds a session ID, and is HttpOnly and SameSite', async () => {
+  const b = browser()
+  const first = await b.get('/business-name')
+  assert.equal(first.headers.get('set-cookie'), null, 'no session is started until there is something to save')
+
+  const res = await b.post('/business-name', { companyName: 'example' })
   const setCookie = res.headers.get('set-cookie') ?? ''
 
-  assert.match(setCookie, /^answers=/)
+  assert.match(setCookie, /^session=[A-Za-z0-9_-]{43}\.[A-Za-z0-9_-]{43};/)
+  assert.doesNotMatch(setCookie, /example/)
   assert.match(setCookie, /HttpOnly/)
   assert.match(setCookie, /SameSite=Lax/)
+  assert.doesNotMatch(setCookie, /Expires|Max-Age/, 'the cookie lasts until the browser is closed')
+
+  const again = await b.post('/business-name', { companyName: 'example two' })
+  assert.equal(again.headers.get('set-cookie'), null, 'the same session is used for later answers')
 })

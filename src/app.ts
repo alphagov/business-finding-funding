@@ -11,7 +11,7 @@ import { journeyRoutes } from './journey/routes'
 import { FakeNotify, missingNotify, NotifyApi, type Notify } from './notify'
 import { passwordProtection } from './password'
 import { PostcodesIo, type PostcodeLookup } from './postcodes'
-import { session } from './session'
+import { MemoryStore, redisStore, session, type SessionStore } from './session'
 
 const govukFrontendDist = path.join(path.dirname(require.resolve('govuk-frontend/package.json')), 'dist')
 
@@ -23,11 +23,14 @@ export interface Services {
   postcodes: PostcodeLookup
   funding: FundingSource
   notify: Notify
+  // Undefined in production if REDIS_URL is not set.
+  sessions?: SessionStore
 }
 
 // Uses made-up Companies House data, and does not send emails, when running
 // locally without API keys. Reads the funding schemes from the funding data
-// API when FUNDING_API_URL is set, and from the data file otherwise.
+// API when FUNDING_API_URL is set, and from the data file otherwise. Keeps
+// answers in memory when running locally without Redis.
 export function createServices (config: Config): Services {
   let companiesHouse: CompaniesHouse
 
@@ -53,7 +56,16 @@ export function createServices (config: Config): Services {
 
   const funding = config.fundingApiUrl ? new FundingApi(config.fundingApiUrl) : fileFunding()
 
-  return { companiesHouse, postcodes: new PostcodesIo(), funding, notify }
+  let sessions: SessionStore | undefined
+
+  if (config.redisUrl) {
+    sessions = redisStore(config.redisUrl)
+  } else if (!config.production) {
+    console.warn('REDIS_URL is not set, so answers will be kept in memory and lost when the app restarts')
+    sessions = new MemoryStore()
+  }
+
+  return { companiesHouse, postcodes: new PostcodesIo(), funding, notify, sessions }
 }
 
 // Locally, a missing SESSION_SECRET is made up when the app starts, so
@@ -106,8 +118,15 @@ export function createApp (config: Config, services: Services = createServices(c
     res.type('text/plain').send('User-agent: *\nDisallow: /\n')
   })
 
-  app.get('/health', (req, res) => {
-    res.json({ status: 'ok' })
+  // Also checks Redis, so a deploy fails if the app cannot keep answers.
+  app.get('/health', async (req, res) => {
+    try {
+      await services.sessions?.check()
+      res.json({ status: 'ok' })
+    } catch (err) {
+      console.error('Health check failed, because Redis could not be reached:', (err as Error).message)
+      res.status(503).json({ status: 'error' })
+    }
   })
 
   app.get('/info', (req, res) => {
@@ -119,7 +138,7 @@ export function createApp (config: Config, services: Services = createServices(c
   })
 
   const secret = sessionSecret(config)
-  const answers = session({ secret, production: config.production })
+  const answers = session({ store: services.sessions, secret, production: config.production })
   app.use(journeyRoutes({ ...services, session: answers }))
   app.use(fundingRoutes({
     funding: services.funding,

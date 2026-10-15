@@ -1,8 +1,9 @@
 import type { Company } from '../companies-house'
 import type { Area } from '../postcodes'
 
-// Everything the visitor has told us so far. It is kept in a signed cookie,
-// so keep it small: store option values, not their labels.
+// Everything the visitor has told us so far. It is kept in Redis (see
+// src/session.ts) and in emailed links, so keep it small: store option
+// values, not their labels.
 export interface Answers {
   companySearch?: string
   company?: Company

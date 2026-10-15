@@ -89,7 +89,7 @@ export function fundingRoutes ({ funding, session, resultsEmail }: FundingOption
     if (id) {
       const shortlist = shortlistOf(req).filter((item) => item !== id)
       if (body.action === 'add') shortlist.push(id)
-      req.session.save({ ...req.session.answers, shortlist })
+      await req.session.save({ ...req.session.answers, shortlist })
     }
     res.redirect(id && returnTo === '/results' ? `${returnTo}#${id}` : returnTo)
   })
@@ -143,11 +143,11 @@ export function fundingRoutes ({ funding, session, resultsEmail }: FundingOption
   })
 
   // Where the emailed link goes. Brings back the answers, then shows the results.
-  router.get('/saved-results/:token', session, (req, res) => {
+  router.get('/saved-results/:token', session, async (req, res) => {
     const answers = decryptAnswers(String(req.params.token), resultsEmail.secret ?? '')
 
     if (!answers) return res.status(404).render('funding/results-link-expired', { linkDays: LINK_DAYS })
-    req.session.save(answers)
+    await req.session.save(answers)
     res.redirect('/results')
   })
 
