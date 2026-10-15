@@ -8,6 +8,8 @@ It asks about the visitor's company, using Companies House, the local authority 
 
 The funding schemes are made-up examples until the real data is ready. See [Funding data](#funding-data).
 
+It can read the schemes from the [funding data API](https://github.com/alphagov/business-finding-funding-api) instead of its own data file. See [Reading the schemes from the funding data API](#reading-the-schemes-from-the-funding-data-api).
+
 ## What it includes
 
 | Path          | Purpose                                              |
@@ -57,6 +59,7 @@ Every response also sends an `X-Robots-Tag: noindex, nofollow` header so the sit
 | `src/journey/sectors.ts` | The sectors, and how they are suggested from SIC codes   |
 | `src/journey/routes.ts` | The Express routes for the question pages                 |
 | `src/funding/schemes.ts` | The format of the funding data, and the checks run on it when the app starts |
+| `src/funding/source.ts` | Where the schemes come from: the data file, or the funding data API |
 | `src/funding/match.ts` | The rules for which schemes to show and which are most relevant |
 | `src/funding/format.ts` | How schemes are shown on the results and shortlist pages |
 | `src/funding/routes.ts` | The Express routes for the results, shortlist and emailed link |
@@ -100,6 +103,20 @@ The app checks the file when it starts and will not start if anything is wrong. 
 
 Which schemes are shown, and which are "most relevant", is decided in `src/funding/match.ts`. The rules are described at the top of that file. They are a starting point and need agreeing with policy.
 
+### Reading the schemes from the funding data API
+
+When `FUNDING_API_URL` is set, the schemes are read from the [funding data API](https://github.com/alphagov/business-finding-funding-api) instead of `data/funding-schemes.json`.
+
+- They are checked in the same way as the data file.
+- They are kept for 5 minutes before the API is asked again.
+- If the API cannot be reached, or sends schemes with problems, the last copy is used and a warning is written to the logs, so a short outage does not stop people seeing their results. If there is no earlier copy, the results page shows an error and the reason is written to the logs.
+
+To run both locally, start the API in its own folder with `npm run dev`, then run this in this folder:
+
+```sh
+FUNDING_API_URL=http://localhost:3001 npm run dev
+```
+
 ## Settings
 
 | Environment variable      | Purpose |
@@ -110,6 +127,7 @@ Which schemes are shown, and which are "most relevant", is decided in `src/fundi
 | `NOTIFY_API_KEY`          | A GOV.UK Notify API key, for emailing links to the results |
 | `NOTIFY_RESULTS_TEMPLATE_ID` | The ID of the Notify email template for the link. See [Emailing a link to the results](#emailing-a-link-to-the-results) |
 | `SERVICE_URL`             | The address of the site, for example `https://govuk-business-finding-funding-906e3c5bb434.herokuapp.com`, used in emailed links. Needed in production |
+| `FUNDING_API_URL`         | The address of the funding data API, for example `http://localhost:3001`. Leave out to read the schemes from `data/funding-schemes.json` |
 
 On Heroku, set these under **Settings > Config Vars**.
 
@@ -119,6 +137,7 @@ When running locally, all of them are optional:
 - without `COMPANIES_HOUSE_API_KEY`, the app uses made-up companies from `src/companies-house.ts`. Search for "example" to see them
 - without `NOTIFY_API_KEY`, no emails are sent. The link that would have been emailed is written to the terminal instead
 - without `SERVICE_URL`, emailed links use the address the page was requested from
+- without `FUNDING_API_URL`, the schemes are read from `data/funding-schemes.json`
 
 In production, the question pages show an error page if `SESSION_SECRET` or `COMPANIES_HOUSE_API_KEY` is missing, and the reason is written to the logs. The start page and `/health` still work.
 
