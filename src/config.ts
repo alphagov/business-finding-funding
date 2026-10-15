@@ -8,6 +8,7 @@ export interface Config {
   notifyResultsTemplateId?: string
   serviceUrl?: string
   fundingApiUrl?: string
+  redisUrl?: string
 }
 
 // All settings come from environment variables, read in one place, so the
@@ -25,6 +26,8 @@ export function loadConfig (env: NodeJS.ProcessEnv = process.env): Config {
     serviceUrl: env.SERVICE_URL?.replace(/\/+$/, '') || undefined,
     // The funding data API, without a trailing slash. Leave out to use the
     // data file in this repository.
-    fundingApiUrl: env.FUNDING_API_URL?.replace(/\/+$/, '') || undefined
+    fundingApiUrl: env.FUNDING_API_URL?.replace(/\/+$/, '') || undefined,
+    // Where visitors' answers are kept. Heroku Redis sets it.
+    redisUrl: env.REDIS_URL || undefined
   }
 }

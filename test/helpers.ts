@@ -6,6 +6,7 @@ import type { Config } from '../src/config'
 import { fileFunding } from '../src/funding/source'
 import { FakeNotify } from '../src/notify'
 import { FakePostcodes } from '../src/postcodes'
+import { MemoryStore } from '../src/session'
 
 export interface TestServer {
   baseUrl: string
@@ -13,11 +14,12 @@ export interface TestServer {
 }
 
 // Uses made-up Companies House and postcode data, and a fake Notify, so
-// tests never call the real services, and the example funding schemes.
+// tests never call the real services, the example funding schemes, and
+// keeps answers in memory.
 export async function startServer (config: Partial<Config> = {}, services: Partial<Services> = {}): Promise<TestServer> {
   const app = createApp(
     { port: 0, production: false, sessionSecret: 'test-session-secret', ...config },
-    { companiesHouse: new FakeCompaniesHouse(), postcodes: new FakePostcodes(), funding: fileFunding(), notify: new FakeNotify(), ...services }
+    { companiesHouse: new FakeCompaniesHouse(), postcodes: new FakePostcodes(), funding: fileFunding(), notify: new FakeNotify(), sessions: new MemoryStore(), ...services }
   )
   const server = app.listen(0)
   await new Promise((resolve) => server.once('listening', resolve))
@@ -34,6 +36,10 @@ export class Browser {
   private readonly cookies = new Map<string, string>()
 
   constructor (private readonly baseUrl: string) {}
+
+  cookie (name: string): string | undefined {
+    return this.cookies.get(name)
+  }
 
   get (path: string): Promise<Response> {
     return this.request(path)

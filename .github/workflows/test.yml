@@ -13,6 +13,18 @@ jobs:
   test:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    # Redis for the tests that keep answers in it, as on Heroku.
+    services:
+      redis:
+        image: redis:8
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 2s
+          --health-retries 15
+    env:
+      TEST_REDIS_URL: redis://localhost:6379
     steps:
       - uses: actions/checkout@v7
 

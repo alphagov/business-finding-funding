@@ -36,7 +36,7 @@ It can read the schemes from the [funding data API](https://github.com/alphagov/
 | `/save-results` | Emails a link to the results and shortlist. See [Emailing a link to the results](#emailing-a-link-to-the-results) |
 | `/saved-results/*` | Where the emailed link goes. Brings back the answers and shows the results |
 | `/password`   | Asks for the site password                           |
-| `/health`     | Health check that returns `{"status":"ok"}`          |
+| `/health`     | Health check that returns `{"status":"ok"}`, or `{"status":"error"}` with status 503 if Redis cannot be reached |
 | `/info`       | App version, Node.js version, Heroku stack and operating system (needs the password) |
 | `/robots.txt` | Stops search engines crawling the site               |
 | `/assets/*`   | GOV.UK Frontend styles, scripts, fonts and images    |
@@ -51,7 +51,7 @@ Every response also sends an `X-Robots-Tag: noindex, nofollow` header so the sit
 | `src/app.ts`         | Creates the Express application from those settings             |
 | `src/server.ts`      | Starts the application on a port. The only file tied to running as a long-lived server |
 | `src/password.ts`    | Shared password protection                                      |
-| `src/session.ts`     | Keeps the visitor's answers in a signed cookie                  |
+| `src/session.ts`     | Keeps the visitor's answers in Redis. See [Visitors' answers](#visitors-answers) |
 | `src/companies-house.ts` | Searches for companies and gets their details from Companies House |
 | `src/postcodes.ts`   | Checks postcodes and finds their local authority using [postcodes.io](https://postcodes.io/) |
 | `src/journey/steps.ts` | The order of the questions, when each one applies, and which page comes next |
@@ -70,7 +70,25 @@ Every response also sends an `X-Robots-Tag: noindex, nofollow` header so the sit
 | `views/`             | Nunjucks page templates                                         |
 | `test/`              | Tests, written in TypeScript                                    |
 
-The app keeps nothing in memory or on local disk between requests, and takes all its settings from environment variables. The visitor's answers are kept in a cookie, signed so they cannot be changed. This means it can move from Heroku to another platform, such as AWS Lambda, by replacing `src/server.ts` rather than rewriting the app.
+The app keeps nothing in memory or on local disk between requests, and takes all its settings from environment variables. The visitor's answers are kept in Redis. This means it can run on more than one server at a time, and move from Heroku to another platform, such as AWS Lambda, by replacing `src/server.ts` rather than rewriting the app.
+
+## Visitors' answers
+
+The visitor's answers, including their shortlist, are kept in Heroku Redis. The browser only holds a cookie called `session` with a random session ID, signed with `SESSION_SECRET` so it cannot be changed. The cookie is only set once there is something to save, and lasts until the browser is closed.
+
+- Answers are kept for 24 hours after the visitor last used them, then Redis deletes them. This is `SESSION_HOURS` in `src/session.ts`.
+- The Heroku Redis Mini plan does not keep data if Redis restarts, for example during maintenance, so visitors may occasionally have to start again. Visitors can keep their results by emailing themselves a link.
+- The plan holds 25 MB, enough for thousands of visitors at a time.
+- If Redis cannot be reached, the question pages show an error page, the reason is written to the logs, and `/health` reports an error. The start page still works.
+
+Heroku Redis needs an encrypted connection, but its certificates cannot be checked against a certificate authority, so, as Heroku's instructions say, the app does not check them.
+
+When running locally without `REDIS_URL`, answers are kept in the app's memory and lost when it restarts. To use Redis locally, start it with Docker:
+
+```sh
+docker compose up -d --wait
+REDIS_URL=redis://localhost:6379 npm run dev
+```
 
 The next page is always the first question that applies and has not been answered. This means the change links on the check answers page return there once any new questions have been answered, and answers to questions that stop applying are removed.
 
@@ -122,7 +140,8 @@ FUNDING_API_URL=http://localhost:3001 npm run dev
 | Environment variable      | Purpose |
 | ------------------------- | ------- |
 | `SITE_PASSWORD`           | The shared password. See [Password protection](#password-protection) |
-| `SESSION_SECRET`          | A long random value used to sign the answers cookie. Changing it clears everyone's answers |
+| `SESSION_SECRET`          | A long random value used to sign the session cookie and encrypt emailed links. Changing it clears everyone's answers and stops emailed links working |
+| `REDIS_URL`               | Where visitors' answers are kept. Heroku Redis sets it. See [Visitors' answers](#visitors-answers) |
 | `COMPANIES_HOUSE_API_KEY` | A [Companies House API key](https://developer.company-information.service.gov.uk/) for the live service. GOV.UK Business team members can ask the team for it |
 | `NOTIFY_API_KEY`          | A GOV.UK Notify API key, for emailing links to the results |
 | `NOTIFY_RESULTS_TEMPLATE_ID` | The ID of the Notify email template for the link. See [Emailing a link to the results](#emailing-a-link-to-the-results) |
@@ -138,8 +157,9 @@ When running locally, all of them are optional:
 - without `NOTIFY_API_KEY`, no emails are sent. The link that would have been emailed is written to the terminal instead
 - without `SERVICE_URL`, emailed links use the address the page was requested from
 - without `FUNDING_API_URL`, the schemes are read from `data/funding-schemes.json`
+- without `REDIS_URL`, answers are kept in the app's memory and lost when it restarts
 
-In production, the question pages show an error page if `SESSION_SECRET` or `COMPANIES_HOUSE_API_KEY` is missing, and the reason is written to the logs. The start page and `/health` still work.
+In production, the question pages show an error page if `SESSION_SECRET`, `REDIS_URL` or `COMPANIES_HOUSE_API_KEY` is missing, and the reason is written to the logs. The start page and `/health` still work.
 
 If `NOTIFY_API_KEY`, `NOTIFY_RESULTS_TEMPLATE_ID` or `SERVICE_URL` is missing in production, the email page says the email could not be sent, and the reason is written to the logs.
 
@@ -147,7 +167,7 @@ The postcode lookup uses the public postcodes.io API and needs no key.
 
 ## Emailing a link to the results
 
-Visitors can ask for an email with a link back to their results and shortlist. The link holds their answers, encrypted with a key derived from `SESSION_SECRET`, so the app still stores nothing. Links stop working after 30 days, or if `SESSION_SECRET` changes. The email address is only passed to GOV.UK Notify.
+Visitors can ask for an email with a link back to their results and shortlist. The link holds their answers, encrypted with a key derived from `SESSION_SECRET`, so nothing extra is stored to make it work. Links stop working after 30 days, or if `SESSION_SECRET` changes. The email address is only passed to GOV.UK Notify.
 
 To set it up in [GOV.UK Notify](https://www.notifications.service.gov.uk/):
 
@@ -222,7 +242,14 @@ npm start
 | `npm run build`     | Compiles `src/` into JavaScript in `dist/`           |
 | `npm test`          | Runs the tests                                       |
 
-GitHub Actions runs all three on every pull request and on each change to `main` (see `.github/workflows/test.yml`). The check is called `test`.
+The tests keep answers in memory. Two tests also use a real Redis, and are skipped unless `TEST_REDIS_URL` is set. To run them locally:
+
+```sh
+docker compose up -d --wait
+TEST_REDIS_URL=redis://localhost:6379 npm test
+```
+
+GitHub Actions runs all three on every pull request and on each change to `main`, with its own Redis, so the Redis tests always run there (see `.github/workflows/test.yml`). The check is called `test`.
 
 ## Deploy to Heroku
 
@@ -244,7 +271,7 @@ Every change merged to `main` is deployed automatically by the `deploy` job in `
 1. packages the commit and uploads it to Heroku
 2. builds it, showing Heroku's build log in the GitHub Actions log
 3. waits for the new release to start, then checks it is still running after Heroku's 60 second start-up limit
-4. requests `/health` and checks it returns `{"status":"ok"}`
+4. requests `/health`, which also checks Redis, and checks it returns `{"status":"ok"}`
 
 If the build fails, the job fails and the previous release keeps running. If the new release does not start, crashes, or does not answer `/health`, the job rolls the app back to the release that was live before, then fails. If the rollback itself fails, the job log says so and shows the command to run by hand: `heroku rollback -a govuk-business-finding-funding`.
 

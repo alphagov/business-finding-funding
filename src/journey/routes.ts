@@ -27,8 +27,8 @@ function fieldList (req: Request, name: string): string[] {
   return values.filter((item): item is string => typeof item === 'string' && item !== '')
 }
 
-function save (req: Request, answers: Answers): void {
-  req.session.save(tidy(answers))
+async function save (req: Request, answers: Answers): Promise<void> {
+  await req.session.save(tidy(answers))
 }
 
 // Moves on to the next question that has not been answered, which is the
@@ -65,7 +65,7 @@ export function journeyRoutes ({ companiesHouse, postcodes, session }: JourneyOp
     res.render('journey/business-name', { backLink: '/', value: req.session.answers.companySearch })
   })
 
-  router.post('/business-name', (req, res) => {
+  router.post('/business-name', async (req, res) => {
     const value = field(req, 'companyName')
     let error
 
@@ -76,7 +76,7 @@ export function journeyRoutes ({ companiesHouse, postcodes, session }: JourneyOp
       return res.status(400).render('journey/business-name', { backLink: '/', value, error: { text: error, href: '#companyName' } })
     }
 
-    save(req, { ...req.session.answers, companySearch: value })
+    await save(req, { ...req.session.answers, companySearch: value })
     res.redirect('/select-business')
   })
 
@@ -108,7 +108,7 @@ export function journeyRoutes ({ companiesHouse, postcodes, session }: JourneyOp
 
     // A different company means all the later answers need giving again.
     const { answers } = req.session
-    save(req, answers.company?.number === company.number
+    await save(req, answers.company?.number === company.number
       ? { ...answers, company }
       : { companySearch: answers.companySearch, company })
     next(req, res)
@@ -129,8 +129,8 @@ export function journeyRoutes ({ companiesHouse, postcodes, session }: JourneyOp
     })
   })
 
-  router.post('/confirm-business', (req, res) => {
-    save(req, { ...req.session.answers, companyConfirmed: true })
+  router.post('/confirm-business', async (req, res) => {
+    await save(req, { ...req.session.answers, companyConfirmed: true })
     next(req, res)
   })
 
@@ -164,7 +164,7 @@ export function journeyRoutes ({ companiesHouse, postcodes, session }: JourneyOp
 
     // If the registered postcode cannot be found, ask for one instead.
     const area = useRegisteredAddress ? await postcodes.find(answers.company!.postcode!) : undefined
-    save(req, withArea({ ...answers, useRegisteredAddress: Boolean(area) }, area))
+    await save(req, withArea({ ...answers, useRegisteredAddress: Boolean(area) }, area))
     next(req, res)
   })
 
@@ -203,7 +203,7 @@ export function journeyRoutes ({ companiesHouse, postcodes, session }: JourneyOp
         })
       }
 
-      save(req, page.answer(req.session.answers, area))
+      await save(req, page.answer(req.session.answers, area))
       next(req, res)
     })
   }
@@ -245,8 +245,8 @@ export function journeyRoutes ({ companiesHouse, postcodes, session }: JourneyOp
       })
     })
 
-    router.post(page.path, (req, res) => {
-      save(req, page.answer(req.session.answers))
+    router.post(page.path, async (req, res) => {
+      await save(req, page.answer(req.session.answers))
       next(req, res)
     })
   }
@@ -287,7 +287,7 @@ export function journeyRoutes ({ companiesHouse, postcodes, session }: JourneyOp
       res.render('journey/question', questionPage(req, question, values))
     })
 
-    router.post(question.path, (req, res) => {
+    router.post(question.path, async (req, res) => {
       const values = fieldList(req, question.answer)
       const error = validate(question, values, req.session.answers)
 
@@ -295,7 +295,7 @@ export function journeyRoutes ({ companiesHouse, postcodes, session }: JourneyOp
         return res.status(400).render('journey/question', questionPage(req, question, values, error))
       }
 
-      save(req, { ...req.session.answers, [question.answer]: question.multiple ? values : values[0] })
+      await save(req, { ...req.session.answers, [question.answer]: question.multiple ? values : values[0] })
       next(req, res)
     })
   }
