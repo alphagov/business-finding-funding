@@ -84,7 +84,7 @@ Each scheme has:
 
 | Field | Required | What it is |
 | ----- | -------- | ---------- |
-| `id` | Yes | A unique name using lower case letters, numbers and hyphens, for example `growth-guarantee-scheme`. Shortlists store this, so do not change it once published |
+| `id` | Yes | A unique name using lower case letters and numbers, joined by hyphens or underscores, for example `growth-guarantee-scheme` or `start_up_loans_uk`. Shortlists store this, so do not change it once published |
 | `type` | Yes | `loan`, `grant` or `equity` |
 | `name`, `provider`, `summary` | Yes | Shown on the scheme's card |
 | `url` | Yes | The provider's page about the scheme, starting `https://` |

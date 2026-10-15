@@ -45,6 +45,7 @@ test('the example funding data is valid', () => {
 test('problems with the funding data are reported', () => {
   assert.deepEqual(checkSchemes('nope'), ['Schemes must be a list'])
   assert.deepEqual(checkSchemes([scheme()]), [])
+  assert.deepEqual(checkSchemes([scheme({ id: 'start_up_loans_uk' })]), [], 'One Platform identifiers use underscores')
 
   const problems = checkSchemes([
     scheme({ id: 'Bad Id', url: 'http://example.com', checkedOn: '09/09/2026' }),
@@ -54,7 +55,7 @@ test('problems with the funding data are reported', () => {
   ])
 
   assert.deepEqual(problems, [
-    'Bad Id: id must only use lower case letters, numbers and hyphens',
+    'Bad Id: id must use lower case letters and numbers, joined by hyphens or underscores',
     'Bad Id: url must start with https://',
     'Bad Id: checkedOn must be a date like 2026-10-08',
     'two: type must be one of loan, grant, equity',
