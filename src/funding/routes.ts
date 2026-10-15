@@ -4,7 +4,8 @@ import { CHECK_ANSWERS, canVisit, nextPath } from '../journey/steps'
 import { card, HEADINGS } from './format'
 import { findFunding } from './match'
 import { decryptAnswers, encryptAnswers, LINK_DAYS, linkExpiry } from './results-link'
-import type { FundingData, FundingType, Scheme } from './schemes'
+import type { FundingType, Scheme } from './schemes'
+import type { FundingSource } from './source'
 import { NotifyError, type Notify } from '../notify'
 
 interface ResultsEmail {
@@ -17,7 +18,7 @@ interface ResultsEmail {
 }
 
 interface FundingOptions {
-  funding: FundingData
+  funding: FundingSource
   session: RequestHandler
   resultsEmail: ResultsEmail
 }
@@ -41,22 +42,22 @@ function shortlistOf (req: Request): string[] {
 // The funding results and the shortlist. Both need every question answered.
 export function fundingRoutes ({ funding, session, resultsEmail }: FundingOptions): Router {
   const router = express.Router()
-  const byId = new Map(funding.schemes.map((scheme) => [scheme.id, scheme]))
 
   router.use(PAGES, session, express.urlencoded({ extended: false }), (req, res, next) => {
     if (canVisit(CHECK_ANSWERS, req.session.answers)) return next()
     res.redirect(nextPath(req.session.answers))
   })
 
-  router.get('/results', (req, res) => {
+  router.get('/results', async (req, res) => {
+    const { example, schemes } = await funding.get()
     const shortlist = shortlistOf(req)
 
     res.render('funding/results', {
       backLink: CHECK_ANSWERS,
-      example: funding.example,
+      example,
       company: req.session.answers.company,
       shortlistCount: shortlist.length,
-      groups: findFunding(funding.schemes, req.session.answers).map((result) => ({
+      groups: findFunding(schemes, req.session.answers).map((result) => ({
         ...HEADINGS[result.type],
         mostRelevant: result.mostRelevant.map((scheme) => card(scheme, shortlist, 'most-relevant')),
         possibleFit: result.possibleFit.map((scheme) => card(scheme, shortlist, 'possible-fit'))
@@ -64,13 +65,14 @@ export function fundingRoutes ({ funding, session, resultsEmail }: FundingOption
     })
   })
 
-  router.get('/shortlist', (req, res) => {
+  router.get('/shortlist', async (req, res) => {
+    const { example, schemes: all } = await funding.get()
     const shortlist = shortlistOf(req)
-    const schemes = shortlist.map((id) => byId.get(id)).filter((scheme): scheme is Scheme => Boolean(scheme))
+    const schemes = shortlist.map((id) => all.find((scheme) => scheme.id === id)).filter((scheme): scheme is Scheme => Boolean(scheme))
 
     res.render('funding/shortlist', {
       backLink: '/results',
-      example: funding.example,
+      example,
       groups: (['loan', 'grant', 'equity'] as FundingType[])
         .map((type) => ({ ...HEADINGS[type], cards: schemes.filter((s) => s.type === type).map((s) => card(s, shortlist)) }))
         .filter((group) => group.cards.length > 0)
@@ -78,9 +80,10 @@ export function fundingRoutes ({ funding, session, resultsEmail }: FundingOption
   })
 
   // Adds or removes a scheme, then goes back to where the button was.
-  router.post('/shortlist', (req, res) => {
+  router.post('/shortlist', async (req, res) => {
+    const { schemes } = await funding.get()
     const body = req.body as Record<string, unknown>
-    const id = typeof body.scheme === 'string' && byId.has(body.scheme) ? body.scheme : undefined
+    const id = schemes.some((scheme) => scheme.id === body.scheme) ? body.scheme as string : undefined
     const returnTo = body.returnTo === '/shortlist' ? '/shortlist' : '/results'
 
     if (id) {

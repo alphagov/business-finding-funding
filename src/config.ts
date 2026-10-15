@@ -7,6 +7,7 @@ export interface Config {
   notifyApiKey?: string
   notifyResultsTemplateId?: string
   serviceUrl?: string
+  fundingApiUrl?: string
 }
 
 // All settings come from environment variables, read in one place, so the
@@ -21,6 +22,9 @@ export function loadConfig (env: NodeJS.ProcessEnv = process.env): Config {
     notifyApiKey: env.NOTIFY_API_KEY || undefined,
     notifyResultsTemplateId: env.NOTIFY_RESULTS_TEMPLATE_ID || undefined,
     // Without a trailing slash, for example https://www.example.gov.uk
-    serviceUrl: env.SERVICE_URL?.replace(/\/+$/, '') || undefined
+    serviceUrl: env.SERVICE_URL?.replace(/\/+$/, '') || undefined,
+    // The funding data API, without a trailing slash. Leave out to use the
+    // data file in this repository.
+    fundingApiUrl: env.FUNDING_API_URL?.replace(/\/+$/, '') || undefined
   }
 }

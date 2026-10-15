@@ -3,7 +3,7 @@ import type { AddressInfo } from 'node:net'
 import { createApp, type Services } from '../src/app'
 import { FakeCompaniesHouse } from '../src/companies-house'
 import type { Config } from '../src/config'
-import { loadFunding } from '../src/funding/schemes'
+import { fileFunding } from '../src/funding/source'
 import { FakeNotify } from '../src/notify'
 import { FakePostcodes } from '../src/postcodes'
 
@@ -17,7 +17,7 @@ export interface TestServer {
 export async function startServer (config: Partial<Config> = {}, services: Partial<Services> = {}): Promise<TestServer> {
   const app = createApp(
     { port: 0, production: false, sessionSecret: 'test-session-secret', ...config },
-    { companiesHouse: new FakeCompaniesHouse(), postcodes: new FakePostcodes(), funding: loadFunding(), notify: new FakeNotify(), ...services }
+    { companiesHouse: new FakeCompaniesHouse(), postcodes: new FakePostcodes(), funding: fileFunding(), notify: new FakeNotify(), ...services }
   )
   const server = app.listen(0)
   await new Promise((resolve) => server.once('listening', resolve))
