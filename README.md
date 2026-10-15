@@ -6,9 +6,7 @@ It is written in [TypeScript](https://www.typescriptlang.org/) and built with [E
 
 It asks about the visitor's company, using Companies House, the local authority area they want funding in, and what they need the funding for. It then shows funding schemes that match, which they can add to a shortlist.
 
-The funding schemes are made-up examples until the real data is ready. See [Funding data](#funding-data).
-
-It can read the schemes from the [funding data API](https://github.com/alphagov/business-finding-funding-api) instead of its own data file. See [Reading the schemes from the funding data API](#reading-the-schemes-from-the-funding-data-api).
+On Heroku it reads the funding schemes from the [funding data API](https://github.com/alphagov/business-finding-funding-api), which publishes the schemes in TPX's One Platform schema workbook. Locally, and in the tests, it uses made-up schemes from its own data file. See [Funding data](#funding-data) and [Reading the schemes from the funding data API](#reading-the-schemes-from-the-funding-data-api).
 
 ## What it includes
 
@@ -65,7 +63,7 @@ Every response also sends an `X-Robots-Tag: noindex, nofollow` header so the sit
 | `src/funding/routes.ts` | The Express routes for the results, shortlist and emailed link |
 | `src/funding/results-link.ts` | Puts the answers into the emailed link, encrypted, and reads them back |
 | `src/notify.ts`      | Sends emails using [GOV.UK Notify](https://www.notifications.service.gov.uk/) |
-| `data/funding-schemes.json` | The funding schemes                                   |
+| `data/funding-schemes.json` | Made-up funding schemes, used locally and in the tests |
 | `src/info.ts`        | Builds the `/info` response                                     |
 | `views/`             | Nunjucks page templates                                         |
 | `test/`              | Tests, written in TypeScript                                    |
@@ -96,7 +94,7 @@ As the service grows, keep its rules (for example, matching businesses to fundin
 
 ## Funding data
 
-The funding schemes are in `data/funding-schemes.json`. While `example` is `true` in that file, the results and shortlist pages say the schemes are made up and not real.
+Unless `FUNDING_API_URL` is set, the funding schemes come from `data/funding-schemes.json`, which holds made-up schemes. While `example` is `true` in that file, or in the API's list of schemes, the results and shortlist pages say the schemes are made up and not real.
 
 Each scheme has:
 
@@ -112,6 +110,7 @@ Each scheme has:
 | `amount` | No | `min` and `max` in pounds. Leave out either if there is no limit |
 | `sectors`, `purposes` | No | The answer values from `src/journey/sectors.ts` and `src/journey/questions.ts` the scheme is for. Leave out if it is for all |
 | `closesOn` | No | The last day to apply. Closed schemes are not shown |
+| `status` | No | From the funding data API, for example `open`, `open-paused` or `pre-launch`. Only open schemes are shown. Leave out in the data file, where every scheme is treated as open |
 | `matchFundingRequired` | No | `true` if the business must pay part of the costs |
 | `interestRate`, `repaymentTerm`, `fees` | No | Shown for loans |
 | `contribution`, `decisionTime` | No | Shown for grants |

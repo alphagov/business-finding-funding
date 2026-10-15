@@ -78,6 +78,13 @@ test('a scheme covers the UK, or the countries, regions and local authorities it
 test('closed schemes and schemes outside the business’s areas are not shown', () => {
   assert.equal(matchScheme(scheme({ closesOn: '2026-10-07' }), ANSWERS, TODAY), undefined)
   assert.ok(matchScheme(scheme({ closesOn: '2026-10-08' }), ANSWERS, TODAY))
+
+  // Only open schemes are shown. Schemes with no status are treated as open.
+  assert.ok(matchScheme(scheme({ status: 'open' }), ANSWERS, TODAY))
+  assert.ok(matchScheme(scheme(), ANSWERS, TODAY))
+  for (const status of ['open-paused', 'open-exhausted', 'closed-cyclical', 'closed-permanent', 'pre-launch']) {
+    assert.equal(matchScheme(scheme({ status }), ANSWERS, TODAY), undefined, status)
+  }
   assert.equal(matchScheme(scheme({ areas: { localAuthorities: [LEEDS.localAuthorityCode] } }), ANSWERS, TODAY), undefined)
 
   // The premises area counts too.

@@ -8,7 +8,7 @@ import type { FundingType, Scheme } from './schemes'
 // here, away from the pages, so they can be changed and tested on their own.
 //
 // A scheme is shown if:
-// - it has not closed
+// - it is open: its status, if it has one, is open, and it has not closed
 // - it covers the funding area, or the area of the property if the business
 //   is moving or expanding premises somewhere else
 // - for equity, the business is open to, or not sure about, giving
@@ -76,6 +76,7 @@ function reach (scheme: Scheme): number {
 }
 
 export function matchScheme (scheme: Scheme, answers: Answers, today: string): Match | undefined {
+  if (scheme.status && scheme.status !== 'open') return undefined
   if (scheme.closesOn && scheme.closesOn < today) return undefined
 
   const areas = [answers.area, answers.premisesArea].filter((area): area is Area => Boolean(area))

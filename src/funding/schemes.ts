@@ -31,6 +31,10 @@ export interface Scheme {
   purposes?: string[]
   // The last day to apply, as YYYY-MM-DD. Leave out if there is no deadline.
   closesOn?: string
+  // From the funding data API, for example open, open-paused or pre-launch.
+  // Only open schemes are shown. Schemes in the data file have no status,
+  // and are treated as open.
+  status?: string
   matchFundingRequired?: boolean
   interestRate?: string
   repaymentTerm?: string
@@ -84,6 +88,7 @@ export function checkSchemes (schemes: unknown): string[] {
     if (typeof scheme.url === 'string' && !scheme.url.startsWith('https://')) problem('url must start with https://')
     if (!isDate(scheme.checkedOn)) problem('checkedOn must be a date like 2026-10-08')
     if (scheme.closesOn !== undefined && !isDate(scheme.closesOn)) problem('closesOn must be a date like 2026-10-08')
+    if (scheme.status !== undefined && (typeof scheme.status !== 'string' || scheme.status === '')) problem('status must be text')
     if (!isStringList(scheme.eligibility)) problem('eligibility must be a list of text')
 
     for (const field of ['sectors', 'purposes'] as const) {
