@@ -1,6 +1,6 @@
 # Find funding for your business (business-finding-funding)
 
-The Find funding for your business service, owned by the GOV.UK Business team (code owners: `@govuk-business/govuk-business-tech-leads`). It is being built from the pages and content tested in the pilot prototype.
+The Find funding for your business service, owned by the GOV.UK Business team (code owners: `@govuk-business/govuk-business-finding-funding-dev`). It is being built from the pages and content tested in the pilot prototype.
 
 It is written in [TypeScript](https://www.typescriptlang.org/) and built with [Express](https://expressjs.com/), [Nunjucks](https://mozilla.github.io/nunjucks/) and the [GOV.UK Design System](https://design-system.service.gov.uk/) (`govuk-frontend`). It runs on Heroku.
 
