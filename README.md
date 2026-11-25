@@ -1,12 +1,12 @@
 # Find funding for your business (business-finding-funding)
 
-The Find funding for your business service, owned by the GOV.UK Business team (`@alphagov/gov-uk-business-team`). It is being built from the pages and content tested in the pilot prototype.
+The Find funding for your business service, owned by the GOV.UK Business team (code owners: `@govuk-business/govuk-business-finding-funding-dev`). It is being built from the pages and content tested in the pilot prototype.
 
 It is written in [TypeScript](https://www.typescriptlang.org/) and built with [Express](https://expressjs.com/), [Nunjucks](https://mozilla.github.io/nunjucks/) and the [GOV.UK Design System](https://design-system.service.gov.uk/) (`govuk-frontend`). It runs on Heroku.
 
 It asks about the visitor's company, using Companies House, the local authority area they want funding in, and what they need the funding for. It then shows funding schemes that match, which they can add to a shortlist.
 
-On Heroku it reads the funding schemes from the [funding data API](https://github.com/alphagov/business-finding-funding-api), which publishes the schemes in TPX's One Platform schema workbook. Locally, and in the tests, it uses made-up schemes from its own data file. See [Funding data](#funding-data) and [Reading the schemes from the funding data API](#reading-the-schemes-from-the-funding-data-api).
+On Heroku it reads the funding schemes from the [funding data API](https://github.com/govuk-business/business-finding-funding-api), which publishes the schemes in TPX's One Platform schema workbook. Locally, and in the tests, it uses made-up schemes from its own data file. See [Funding data](#funding-data) and [Reading the schemes from the funding data API](#reading-the-schemes-from-the-funding-data-api).
 
 ## What it includes
 
@@ -122,7 +122,7 @@ Which schemes are shown, and which are "most relevant", is decided in `src/fundi
 
 ### Reading the schemes from the funding data API
 
-When `FUNDING_API_URL` is set, the schemes are read from the [funding data API](https://github.com/alphagov/business-finding-funding-api) instead of `data/funding-schemes.json`.
+When `FUNDING_API_URL` is set, the schemes are read from the [funding data API](https://github.com/govuk-business/business-finding-funding-api) instead of `data/funding-schemes.json`.
 
 - They are checked in the same way as the data file.
 - They are kept for 5 minutes before the API is asked again.
@@ -280,7 +280,7 @@ To redeploy without a code change, run the **Test and deploy** workflow by hand 
 
 This only needs doing once, by someone with access to the Heroku app:
 
-1. Create a Heroku API key for this repository only. In Heroku, go to **Account settings > Applications > Authorizations > Create authorization** and give it a description such as "alphagov/business-finding-funding deploys". Do not use your personal API key.
+1. Create a Heroku API key for this repository only. In Heroku, go to **Account settings > Applications > Authorizations > Create authorization** and give it a description such as "govuk-business/business-finding-funding deploys". Do not use your personal API key.
 2. In this repository, go to **Settings > Environments > New environment** and create an environment called `heroku`. Under **Deployment branches and tags**, allow only `main`.
 3. In the `heroku` environment, add an environment secret called `HEROKU_API_KEY` containing the key from step 1.
 

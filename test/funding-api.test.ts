@@ -6,7 +6,7 @@ import { loadFunding, type FundingData } from '../src/funding/schemes'
 import { FundingApi } from '../src/funding/source'
 import { answerEverything, Browser, startServer, type TestServer } from './helpers'
 
-// Stands in for the funding data API (alphagov/business-finding-funding-api),
+// Stands in for the funding data API (govuk-business/business-finding-funding-api),
 // answering /v1/schemes as it does.
 async function startFakeApi (funding: FundingData = loadFunding()): Promise<TestServer> {
   const app = express()
