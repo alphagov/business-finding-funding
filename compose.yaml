@@ -6,6 +6,13 @@
 #   TEST_REDIS_URL=redis://localhost:6379 npm test
 #
 # Without it, answers are kept in memory, and the Redis tests are skipped.
+#
+# To run the app in a container too, built from the Dockerfile:
+#
+#   docker compose --profile app up --build
+#
+# To include the funding data API as well, see compose.api.yaml. See "Run it
+# in Docker" in README.md.
 services:
   redis:
     image: redis:8
@@ -15,3 +22,29 @@ services:
       test: ["CMD", "redis-cli", "ping"]
       interval: 2s
       retries: 15
+
+  app:
+    profiles: [app]
+    build:
+      context: .
+      args:
+        BUILD_NUMBER: ${BUILD_NUMBER:-local}
+        GIT_REF: ${GIT_REF:-local}
+        GIT_BRANCH: ${GIT_BRANCH:-local}
+    environment:
+      # The production image with development settings: made-up Companies
+      # House data, no emails sent and no HTTPS redirect.
+      NODE_ENV: development
+      REDIS_URL: redis://redis:6379
+      # For local use only, so answers in Redis survive a restart.
+      SESSION_SECRET: local-only-session-secret
+      SITE_PASSWORD: ${SITE_PASSWORD:-}
+    ports:
+      - "127.0.0.1:3000:3000"
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:3000/health"]
+      interval: 2s
+      retries: 30

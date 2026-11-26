@@ -1,0 +1,17 @@
+# Adds the funding data API, its database and its release step to
+# compose.yaml, and has Find funding read the schemes from it:
+#
+#   docker compose -f compose.yaml -f compose.api.yaml --profile app up --build
+#
+# Needs business-finding-funding-api checked out next to this repository, or
+# FUNDING_API_REPO set to where it is. See "Run it in Docker" in README.md.
+include:
+  - path: ${FUNDING_API_REPO:-../business-finding-funding-api}/compose.yaml
+
+services:
+  app:
+    environment:
+      FUNDING_API_URL: http://api:3001
+    depends_on:
+      api:
+        condition: service_healthy

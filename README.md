@@ -233,6 +233,37 @@ npm run build
 npm start
 ```
 
+## Run it in Docker
+
+The `Dockerfile` builds the app as a container image, ready for the GOV.UK Business platform. To build it and run it with Redis (requires Docker):
+
+```sh
+docker compose --profile app up --build
+```
+
+Then go to http://localhost:3000. It runs the production image with development settings: made-up Companies House data, no emails sent and no HTTPS redirect. To test the password page, set `SITE_PASSWORD` before the command.
+
+To read the schemes from the [funding data API](https://github.com/govuk-business/business-finding-funding-api) as well, check it out next to this repository and run:
+
+```sh
+docker compose -f compose.yaml -f compose.api.yaml --profile app up --build
+```
+
+This also starts the API's database and runs its release step (the migrations and the TPX import) before the API starts. If the API is checked out somewhere else, set `FUNDING_API_REPO` to its folder.
+
+To stop it, run the same command with `down` in place of `up --build`.
+
+About the image:
+
+- it is built in stages, so the final image holds only the compiled code, its production dependencies and the files it reads when it runs
+- it is based on Node.js 24 on Alpine Linux, pinned to an exact version, and Dependabot keeps it up to date
+- it runs as an unprivileged user and cannot change its own files
+- packages' install scripts are not run when it is built, as a defence against a compromised package
+- it needs `BUILD_NUMBER`, `GIT_REF` and `GIT_BRANCH` build arguments, so every image says what it was built from. `compose.yaml` sets them to `local`
+- `.dockerignore` lists the only files the image is built from, so `.env` files and local `node_modules` never go into it
+
+GitHub Actions builds the image and checks it starts and passes its health check on every pull request (the `docker` check). Images are not yet published anywhere.
+
 ## Checks
 
 | Command             | What it does                                         |
